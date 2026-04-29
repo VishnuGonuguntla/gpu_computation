@@ -1,7 +1,7 @@
 # configuration
 
 TEST_CASE = stream
-BUILD_DIR = ../build/$(TEST_CASE)
+BUILD_DIR = ../../build/$(TEST_CASE)
 
 
 # default benchmark parameters
