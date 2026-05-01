@@ -7,7 +7,7 @@
 void parseCLA_1d(int argc, char *const *argv, size_t &nx, size_t &nItWarmUp, size_t &nIt) {
     // default values
     nx = 1024 * 1024;
-    nItWarmUp = 2;
+    nItWarmUp = 4;
     nIt = 10;
 
     // override with command line arguments
