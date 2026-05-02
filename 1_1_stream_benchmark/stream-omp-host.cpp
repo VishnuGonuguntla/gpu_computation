@@ -1,9 +1,10 @@
 #include <chrono>
 
-#include "../util.h"
+#include "util.h"
 #include "stream-util.h"
 
 inline void stream(size_t nx, const double *__restrict__ src, double *__restrict__ dest) {
+# pragma omp parallel for schedule (static)
     for (int i = 0; i < nx; ++i)
         dest[i] = src[i] + 1;
 }

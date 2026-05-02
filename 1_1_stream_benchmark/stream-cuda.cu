@@ -2,7 +2,7 @@
 
 #include "stream-util.h"
 #include "../cuda-util.h"
-#include "../util.h"
+#include "util.h"
 
 
 __global__

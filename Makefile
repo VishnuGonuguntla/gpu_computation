@@ -1,102 +1,53 @@
-# configuration
-
-TEST_CASE = stream
-SRC_DIR = src
-BUILD_DIR = build
-CC = g++
-NVCC = nvcc
-TARGET = $(BUILD_DIR)/my_program
-
-C_FLAGS = -O3 -march=native -std=c++17
+# Compiler & flags
+CC         = g++
+NVCC       = nvcc
+C_FLAGS    = -O3 -march=native -std=c++17
 CUDA_FLAGS = -O3 -std=c++17
 
-CPP_SOURCES = $(shell find $(SRC_DIR) -type f -name '*.cpp')
-CUDA_CPP_SOURCES = $(shell find $(SRC_DIR) -type f -name '*.cu')
+SRC_DIR   = src
+BUILD_DIR = build
 
-CPP_OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(CPP_SOURCES))
-CUDA_CPP_OBJECTS = $(patsubst $(SRC_DIR)/%.cu, $(BUILD_DIR)/%.o, $(CUDA_CPP_SOURCES))
-OBJECTS = $(CPP_OBJECTS) $(CUDA_CPP_OBJECTS)
+.DEFAULT_GOAL := all
+# ── Auto-discover exercises (subdirs of src/) ────────────────────────────────
+EXERCISES := $(shell find $(SRC_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
 
+# ── Per-file binary macro ────────────────────────────────────────────────────
+# $(1) = source file, $(2) = output binary
+define FILE_RULES
+$(2): $(1)
+	@mkdir -p $$(@D)
+	$(if $(filter %.cu,$(1)),$(NVCC) $(CUDA_FLAGS),$(CC) $(C_FLAGS)) $(1) -o $(2)
+endef
+
+# ── Per-exercise macro ───────────────────────────────────────────────────────
+define EXERCISE_RULES
+
+$(1)_SRCS      := $$(shell find $(SRC_DIR)/$(1) -type f \( -name '*.cpp' -o -name '*.cu' \))
+$(1)_CPP_SRCS  := $$(filter %.cpp,$$($(1)_SRCS))
+$(1)_CU_SRCS   := $$(filter %.cu,$$($(1)_SRCS))
+$(1)_CPP_STEMS := $$(patsubst $(SRC_DIR)/$(1)/%.cpp,%,$$($(1)_CPP_SRCS))
+$(1)_CU_STEMS  := $$(patsubst $(SRC_DIR)/$(1)/%.cu,%,$$($(1)_CU_SRCS))
+$(1)_SHARED    := $$(filter $$($(1)_CU_STEMS),$$($(1)_CPP_STEMS))
+
+$(1)_CPP_BINS  := $$(foreach stem,$$($(1)_CPP_STEMS),$(BUILD_DIR)/$(1)/$$(if $$(filter $$(stem),$$($(1)_SHARED)),$$(stem)_cpp,$$(stem)))
+$(1)_CU_BINS   := $$(foreach stem,$$($(1)_CU_STEMS),$(BUILD_DIR)/$(1)/$$(if $$(filter $$(stem),$$($(1)_SHARED)),$$(stem)_cu,$$(stem)))
+$(1)_BINS      := $$($(1)_CPP_BINS) $$($(1)_CU_BINS)
+
+.PHONY: $(1)
+$(1): $$($(1)_BINS)
+
+$$(foreach stem,$$($(1)_CPP_STEMS),$$(eval $$(call FILE_RULES,$(SRC_DIR)/$(1)/$$(stem).cpp,$(BUILD_DIR)/$(1)/$$(if $$(filter $$(stem),$$($(1)_SHARED)),$$(stem)_cpp,$$(stem)))))
+$$(foreach stem,$$($(1)_CU_STEMS),$$(eval $$(call FILE_RULES,$(SRC_DIR)/$(1)/$$(stem).cu,$(BUILD_DIR)/$(1)/$$(if $$(filter $$(stem),$$($(1)_SHARED)),$$(stem)_cu,$$(stem)))))
+
+endef
+
+# ── Instantiate rules for every exercise ────────────────────────────────────
+$(foreach ex, $(EXERCISES), $(eval $(call EXERCISE_RULES,$(ex))))
+
+# ── Convenience targets ──────────────────────────────────────────────────────
 .PHONY: all clean
 
-all: $(TARGET)
-
-$(TARGET) : $(OBJECTS)
-	mkdir -p $(BUILD_DIR)
-	$(CC) $(C_FLAGS) $(OBJECTS) -o $(TARGET)
-
-$(BUILD_DIR)/%.o : $(SRC_DIR)/%.cpp
-	mkdir -p $(dir $@)
-	$(CC) $(C_FLAGS) -c $< -o $@
-
-$(BUILD_DIR)/%.o : $(SRC_DIR)/%.cu
-	mkdir -p $(dir $@)
-	$(NVCC) $(CUDA_FLAGS) -c $< -o $@
-
-$(BUILD_DIR)/%: $(SRC_DIR)/%.cpp $(OBJECTS)
-	@mkdir -p $(@D)
-	$(CC) $(C_FLAGS) $< $(OBJECTS) -o $@
-
-.SECONDARY: $(OBJECTS) 
+all: $(EXERCISES)
 
 clean:
 	rm -rf $(BUILD_DIR)
-
-
-# define compile_and_run
-# 	@echo "=== Building $(1) ==="
-# 	@mkdir -p $(BIN_DIR)
-# 	$(CC) $(CFLAGS) $(SRC_DIR)/$(1)/*.c -o $(BIN_DIR)/$(1)
-# 	@echo "=== Running $(1) ==="
-# 	./$(BIN_DIR)/$(1)
-# 	@echo "====================\n"
-# endef
-
-
-
-# targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-omp-host
-
-
-# .PHONY: all
-# all: mk-target-dir $(targets)
-
-
-# mk-target-dir:
-# 	mkdir -p $(BUILD_DIR)
-
-
-# # build rules
-
-# $(BUILD_DIR)/$(TEST_CASE)-base: $(TEST_CASE)-base.cpp $(TEST_CASE)-util.h util.h
-# 	g++ -O3 -march=native -std=c++17 -o $(BUILD_DIR)/$(TEST_CASE)-base $(TEST_CASE)-base.cpp
-
-# $(BUILD_DIR)/$(TEST_CASE)-omp-host: $(TEST_CASE)-omp-host.cpp $(TEST_CASE)-util.h util.h
-# 	g++ -O3 -march=native -std=c++17 -fopenmp -o $(BUILD_DIR)/$(TEST_CASE)-omp-host $(TEST_CASE)-omp-host.cpp
-
-
-# # aliases without build directory
-
-# .PHONY: $(TEST_CASE)-base
-# $(TEST_CASE)-base: $(BUILD_DIR)/$(TEST_CASE)-base
-
-# .PHONY: $(TEST_CASE)-omp-host
-# $(TEST_CASE)-omp-host: $(BUILD_DIR)/$(TEST_CASE)-omp-host
-
-
-# # automated benchmark target
-
-# .PHONY: bench
-# bench: all
-# 	@echo "Base:"
-# 	$(BUILD_DIR)/$(TEST_CASE)-base $(PARAMETERS)
-# 	@echo ""
-# 	@echo "OpenMP Host:"
-# 	$(BUILD_DIR)/$(TEST_CASE)-omp-host $(PARAMETERS)
-# 	@echo ""
-
-
-# # clean target
-
-# .PHONY: clean
-# clean:
-# 	rm $(targets)
