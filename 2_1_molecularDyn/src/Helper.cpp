@@ -2,6 +2,13 @@
 #include <map>
 #include <string>
 #include <fstream>
+#include <chrono>
+
+inline void initialStats(std::map<std::string, double>& parameters) {
+    std::cout << "Particles: " << parameters["nParticles"] << std::endl;
+    std::cout << "StepSize: " << parameters["timeStep"] << std::endl;
+    std::cout << "TotalTime: " << parameters["nTime"] <<  " Iterations: " <<  parameters["nTime"] / parameters["timeStep"]<< std::endl;
+}
 
 inline void parseParameter(std::string filename, std::map<std::string, double>& parameters) {
     std::ifstream file;
@@ -23,4 +30,10 @@ inline void parseParameter(std::string filename, std::map<std::string, double>& 
         std::cerr << "!!! Error Opening File" << std::endl;
         return;
     }
+}
+
+inline void printStats(const std::chrono::duration<double> elapsedSeconds, size_t particles, size_t iterations) {
+    std::cout << "  #Particles / #Iterations:  " << particles << " / " << iterations << "\n";
+    std::cout << "  elapsed time:  " << elapsedSeconds.count() << " s\n";
+    std::cout << "  MLUP/s:        " << 1e-6 * particles * iterations / elapsedSeconds.count() << "\n";
 }

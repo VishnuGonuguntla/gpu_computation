@@ -14,18 +14,20 @@ poissonRatio 0.3
 rEffective 0.5
 
 # constants:
-mass 0.01
-sigma 2
-epsilon 0.05
-Lsys 5
+mass 1
+sigma 1
+eps 1
+kT 1
+boxSize 20
 
 # Iteration Data:
 # -------------------
 
-timeStep 0.1
-nTime 0.5
-eps 0.0000001
+timeStep 0.001
+nTime 10
+epsilon 0.0000001
 omg 1.0
 neighborRebuild 20
+calculateEnergy 1000
 
 +=================================

@@ -2,23 +2,22 @@
 
 Solver::Solver(std::map<std::string, double> parameters) {
     params = parameters;
-    // for (auto i : params) {
-    //     std::cout << i.first << ": " << i.second << std::endl;
-    // }
 }
 
 void Solver::initSolver() {
     int n = params["nParticles"];
+    double boxSize = params["boxSize"];
+    double kT = params["kT"];
+
     mass.resize(n, params["mass"]);
     radius.resize(n, params["radius"]);
     acc.resize(3*n, 0);
     pos.resize(3*n, 0);
     vel.resize(3*n, 0);
-    double boxSize = params["boxSize"];
     // Initialize Velocity and Pos
     std::default_random_engine gen;
     for (int i = 0; i < n; i++) {
-        double sigma = std::sqrt(25/mass[i]);
+        double sigma = std::sqrt(kT/mass[i]);
         std::normal_distribution<double> dist(0.0, sigma);
         vel[3*i + 0] = dist(gen);
         vel[3*i + 1] = dist(gen);
@@ -41,7 +40,7 @@ void Solver::initSolver() {
     }
 }
 
-void Solver::computeForceLJ(int iter, int index) {
+void Solver::computeForceLJ(int index) {
     int nParticles = (int)params["nParticles"];
     double boxSize = params["boxSize"];
     double sigma = params["sigma"];
@@ -59,31 +58,28 @@ void Solver::computeForceLJ(int iter, int index) {
         y -= boxSize * std::round(y / boxSize);
         z -= boxSize * std::round(z / boxSize);
 
-        // after updating positions, wrap them back into box
-        pos[3*i+0] -= boxSize * std::floor(pos[3*i+0] / boxSize);
-        pos[3*i+1] -= boxSize * std::floor(pos[3*i+1] / boxSize);
-        pos[3*i+2] -= boxSize * std::floor(pos[3*i+2] / boxSize);
-
         double dist2 = x*x + y*y + z*z; //xij^2
+        if (dist2 < 1e-10) continue;
         if (dist2 > cutoff * cutoff) continue;
 
         double sr2  = (sigma * sigma) / dist2;  // (σ/r)²
         double sr6  = sr2 * sr2 * sr2;          // (σ/r)^6  — avoids expensive pow()
         double sr12 = sr6 * sr6;                // (σ/r)^12
-        double constval = 24 * eps / dist2 * (2 * sr12 - sr6);
+        double constval = 24 * eps * (2 * sr12 - sr6) / dist2;
 
-        fx += constval * x / dist2;
-        fy += constval * y / dist2;
-        fz += constval * z / dist2;
+        fx += constval * x;
+        fy += constval * y;
+        fz += constval * z;
     }
     acc[3*index + 0] = fx / mass[index];
     acc[3*index + 1] = fy / mass[index];
     acc[3*index + 2] = fz / mass[index];
 }
 
-void Solver::firstIntegratePBC(int iter) {
+void Solver::firstIntegratePBC() {
     int nParticles = params["nParticles"];
     double timeStep = params["timeStep"];
+    double boxSize = params["boxSize"];
     double timeStep2 = timeStep * timeStep;
 
     for (int i = 0; i < nParticles; i++) {
@@ -102,6 +98,12 @@ void Solver::firstIntegratePBC(int iter) {
         pos[3*i + 0] = x + vx * timeStep + 0.5 * ax * timeStep2;
         pos[3*i + 1] = y + vy * timeStep + 0.5 * ay * timeStep2;
         pos[3*i + 2] = z + vz * timeStep + 0.5 * az * timeStep2;
+
+        // after updating positions, wrap them back into box
+        pos[3*i+0] -= boxSize * std::floor(pos[3*i+0] / boxSize);
+        pos[3*i+1] -= boxSize * std::floor(pos[3*i+1] / boxSize);
+        pos[3*i+2] -= boxSize * std::floor(pos[3*i+2] / boxSize);
+
         // (t + delT/2)
         vel[3*i + 0] = vx + 0.5 * ax * timeStep;
         vel[3*i + 1] = vy + 0.5 * ay * timeStep;
@@ -110,7 +112,7 @@ void Solver::firstIntegratePBC(int iter) {
 
 }
 
-void Solver::finalIntegratePBC(int iter) {
+void Solver::finalIntegratePBC() {
     int nParticles = params["nParticles"];
     double timeStep = params["timeStep"];
 
@@ -168,6 +170,7 @@ void Solver::calculateEnergy() {
 }
 
 void Solver::writeVTK(std::string filename) {
+
     int n = params["nParticles"];
     std::ofstream f(filename);
     if (!f.is_open()) {
@@ -192,7 +195,6 @@ void Solver::writeVTK(std::string filename) {
     for (int i = 0; i < n ; i++) {
         f << acc[3*i + 0] << " " << acc[3*i + 1] << " " << acc[3*i + 2] << " " << std::endl;
     }
-
     f.close();
     return;
 }
