@@ -5,6 +5,7 @@
 
 #include "Helper.cpp"
 #include "Solver.hpp"
+#include "cudaSolver.hpp"
 #include "../util.h"
 
 int main(int argc, char* argv[]) {
@@ -21,35 +22,39 @@ int main(int argc, char* argv[]) {
     }    
 #endif
     Solver solver(parameters);
-    solver.initSolver();
     initialStats(parameters);
     int nParticles = (int)parameters["nParticles"];
     double timeStep = parameters["timeStep"];
     double nTimeSteps = parameters.at("nTime") / timeStep;
     int calculateEnergy = (int)parameters["calculateEnergy"];
-    // An object for Solver will be created here, and the main simulation loop will be implemented.
+
+    
+    solver.cudaInitSolver();
+
     auto start = std::chrono::steady_clock::now();
 
-    for (int iter = 0; iter < (int)nTimeSteps; iter++) {
-        solver.firstIntegratePBC(); // O(N)
+    // for (int iter = 0; iter < (int)nTimeSteps; iter++) {
+    //     solver.cudaFirstIntegratePBC(); // O(N)
 
-        for (int n = 0; n < nParticles; n++) {
+    //     for (int n = 0; n < nParticles; n++) {
 
-            solver.computeForceLJ(n); // O(N^2)
+    //         solver.cudaComputeForceLJ(n); // O(N^2)
 
-        }
-        solver.finalIntegratePBC(); // O(N)
-        if (iter % calculateEnergy == 0) {
-            std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
-            solver.calculateEnergy();
-        }
-        // generate vtk every 100 timeSteps
-        // std::string outFile = "out_" + std::to_string(iter) + ".vtk";
-        // solver.writeVTK("output.vtk");
-    }
-    auto end = std::chrono::steady_clock::now();
-    printStats(end-start, nParticles, (int)nTimeSteps);
-    solver.writeVTK("output.vtk");
+    //     }
+    //     solver.cudaFinalIntegratePBC(); // O(N)
+    //     if (iter % calculateEnergy == 0) {
+    //         std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
+    //         for (int n = 0; n < nParticles; n++) {
+    //          solver.cudaCalculateEnergy(n);
+            // }
+    //     }
+    //     // generate vtk every 100 timeSteps
+    //     // std::string outFile = "out_" + std::to_string(iter) + ".vtk";
+    //     // solver.writeVTK("output.vtk");
+    // }
+    // auto end = std::chrono::steady_clock::now();
+    // printStats(end-start, nParticles, (int)nTimeSteps);
+    solver.writeVTK("cudaOutput.vtk");
 
     return 0;
 }
