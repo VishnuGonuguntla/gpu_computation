@@ -22,7 +22,7 @@ void parseCLA_1d(int argc, char *const *argv, size_t &WIDTH, size_t &HEIGHT, siz
 
 
 void printStats(const std::chrono::duration<double> elapsedSeconds, size_t nParticles, size_t maxIter) {
-    std::cout << "  #cells / #maxIter:  " << nParticles << " / " << nTime << "\n";
+    std::cout << "  #particles / #maxIter:  " << nParticles << " / " << maxIter << "\n";
     std::cout << "  elapsed time:  " << 1e3 * elapsedSeconds.count() << " ms\n";
     std::cout << "  MLUP/s:        " << 1e-6 * nParticles * maxIter / elapsedSeconds.count() << "\n";
 }

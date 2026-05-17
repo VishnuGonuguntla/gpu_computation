@@ -16,8 +16,9 @@ class Solver {
     public:
     Solver(std::map<std::string, double> parameters);
     void initSolver();
-    void computeForceLJ(int index);
-    void firstIntegratePBC();
-    void finalIntegratePBC();
+    void computeForceLJ(int iter, int index);
+    void firstIntegratePBC(int iter);
+    void finalIntegratePBC(int iter);
+    void calculateEnergy();
     void writeVTK(std::string filename);
 };
