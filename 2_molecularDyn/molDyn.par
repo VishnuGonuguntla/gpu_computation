@@ -17,17 +17,18 @@ rEffective 0.5
 mass 1
 sigma 1
 eps 1
-kT 1
+kT 4
 boxSize 20
 
 # Iteration Data:
 # -------------------
 
-timeStep 0.001
+timeStep 0.01
 nTime 10
 epsilon 0.0000001
 omg 1.0
 neighborRebuild 20
-calculateEnergy 1000
+calculateEnergy 100
+writeVtk 100
 
 +=================================

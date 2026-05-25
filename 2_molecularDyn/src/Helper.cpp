@@ -35,5 +35,5 @@ inline void parseParameter(std::string filename, std::map<std::string, double>& 
 inline void printStats(const std::chrono::duration<double> elapsedSeconds, size_t particles, size_t iterations) {
     std::cout << "  #Particles / #Iterations:  " << particles << " / " << iterations << "\n";
     std::cout << "  elapsed time:  " << elapsedSeconds.count() << " s\n";
-    std::cout << "  MLUP/s:        " << 1e-6 * particles * iterations / elapsedSeconds.count() << "\n";
+    std::cout << "  MLUP/s:        " << 1e-3 * particles * iterations / elapsedSeconds.count() << "\n";
 }
