@@ -40,7 +40,7 @@ void Solver::initSolver() {
     }
 }
 
-void Solver::computeForceLJ(int index) {
+void Solver::computeForceLJ() {
     int nParticles = (int)params["nParticles"];
     double boxSize = params["boxSize"];
     double sigma = params["sigma"];
@@ -48,40 +48,35 @@ void Solver::computeForceLJ(int index) {
     double eps = params["eps"];
     double fx = 0, fy = 0, fz = 0;
     for (int i = 0; i < nParticles; i++) {
-        if (index == i) continue;
-        // std::cout << pos.size() << " " << vel.size() << " " <<  acc.size() << std::endl;
-        double x = pos[3*index + 0] - pos[3*i + 0]; 
-        double y = pos[3*index + 1] - pos[3*i + 1]; 
-        double z = pos[3*index + 2] - pos[3*i + 2];
+        for (int j = 0; j < nParticles; j++) {
+            if (j == i) continue;
+            // std::cout << pos.size() << " " << vel.size() << " " <<  acc.size() << std::endl;
+            double x = pos[3*i + 0] - pos[3*j + 0]; 
+            double y = pos[3*i + 1] - pos[3*j + 1]; 
+            double z = pos[3*i + 2] - pos[3*j + 2];
 
-        x -= boxSize * std::round(x / boxSize);
-        y -= boxSize * std::round(y / boxSize);
-        z -= boxSize * std::round(z / boxSize);
+            x -= boxSize * std::round(x / boxSize);
+            y -= boxSize * std::round(y / boxSize);
+            z -= boxSize * std::round(z / boxSize);
 
-        double dist2 = x*x + y*y + z*z; //xij^2
-        if (dist2 < 1e-10) continue;
-        if (dist2 > cutoff * cutoff) continue;
+            double dist2 = x*x + y*y + z*z; //xij^2
+            if (dist2 < 1e-10) continue;
+            if (dist2 > cutoff * cutoff) continue;
 
-        double sr2  = (sigma * sigma) / dist2;  // (σ/r)²
-        double sr6  = sr2 * sr2 * sr2;          // (σ/r)^6  — avoids expensive pow()
-        double sr12 = sr6 * sr6;                // (σ/r)^12
-        double constval = 24 * eps * (2 * sr12 - sr6) / dist2;
+            double sr2  = (sigma * sigma) / dist2;  // (σ/r)²
+            double sr6  = sr2 * sr2 * sr2;          // (σ/r)^6  — avoids expensive pow()
+            double sr12 = sr6 * sr6;                // (σ/r)^12
+            double constval = 24 * eps * (2 * sr12 - sr6) / dist2;
 
-        fx += constval * x;
-        fy += constval * y;
-        fz += constval * z;
-
-        // acc[3*i + 0] = -constval*x / mass[i];
-        // acc[3*i + 1] = -constval*y / mass[i];
-        // acc[3*i + 2] = -constval*z / mass[i];
+            fx += constval * x;
+            fy += constval * y;
+            fz += constval * z;
+        }
+        fx = 0; fy = 0; fz = 0; // reset forces for next iteration
     }
     acc[3*index + 0] = fx / mass[index];
     acc[3*index + 1] = fy / mass[index];
     acc[3*index + 2] = fz / mass[index];
-
-   
-
-
 }
 
 void Solver::firstIntegratePBC() {
@@ -91,21 +86,10 @@ void Solver::firstIntegratePBC() {
     double timeStep2 = timeStep * timeStep;
 
     for (int i = 0; i < nParticles; i++) {
-        double x = pos[3*i + 0];
-        double y = pos[3*i + 1];
-        double z = pos[3*i + 2];
-
-        double vx = vel[3*i + 0];
-        double vy = vel[3*i + 1];
-        double vz = vel[3*i + 2];
-
-        double ax = acc[3*i + 0];
-        double ay = acc[3*i + 1];
-        double az = acc[3*i + 2];
         // (t + delT)
-        pos[3*i + 0] = x + vx * timeStep + 0.5 * ax * timeStep2;
-        pos[3*i + 1] = y + vy * timeStep + 0.5 * ay * timeStep2;
-        pos[3*i + 2] = z + vz * timeStep + 0.5 * az * timeStep2;
+        pos[3*i + 0] = pos[3*i + 0] + vel[3*i + 0] * timeStep + 0.5 * acc[3*i + 0] * timeStep2;
+        pos[3*i + 1] = pos[3*i + 1] + vel[3*i + 1] * timeStep + 0.5 * acc[3*i + 1] * timeStep2;
+        pos[3*i + 2] = pos[3*i + 2] + vel[3*i + 2] * timeStep + 0.5 * acc[3*i + 2] * timeStep2;
 
         // after updating positions, wrap them back into box
         pos[3*i+0] -= boxSize * std::floor(pos[3*i+0] / boxSize);
@@ -113,9 +97,9 @@ void Solver::firstIntegratePBC() {
         pos[3*i+2] -= boxSize * std::floor(pos[3*i+2] / boxSize);
 
         // (t + delT/2)
-        vel[3*i + 0] = vx + 0.5 * ax * timeStep;
-        vel[3*i + 1] = vy + 0.5 * ay * timeStep;
-        vel[3*i + 2] = vz + 0.5 * az * timeStep;
+        vel[3*i + 0] = vel[3*i + 0] + 0.5 * acc[3*i + 0] * timeStep;
+        vel[3*i + 1] = vel[3*i + 1] + 0.5 * acc[3*i + 1] * timeStep;
+        vel[3*i + 2] = vel[3*i + 2] + 0.5 * acc[3*i + 2] * timeStep;
     }
 
 }
@@ -134,9 +118,9 @@ void Solver::finalIntegratePBC() {
         double ay = acc[3*i + 1];
         double az = acc[3*i + 2];
         // (t + delT)
-        vel[3*i + 0] = vx + 0.5 * ax * timeStep;
-        vel[3*i + 1] = vy + 0.5 * ay * timeStep;
-        vel[3*i + 2] = vz + 0.5 * az * timeStep;
+        vel[3*i + 0] = vel[3*i + 0] + 0.5 * acc[3*i + 0] * timeStep;
+        vel[3*i + 1] = vel[3*i + 1] + 0.5 * acc[3*i + 1] * timeStep;
+        vel[3*i + 2] = vel[3*i + 2] + 0.5 * acc[3*i + 2] * timeStep;
     }
 }
 

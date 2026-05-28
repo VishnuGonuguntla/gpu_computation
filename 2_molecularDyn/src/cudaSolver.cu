@@ -137,6 +137,11 @@ void Solver::writeVTK(std::string filename, int iter) {
     for (int i = 0; i < n ; i++) {
         f << vel[3*i + 0] << " " << vel[3*i + 1] << " " << vel[3*i + 2] << " " << std::endl;
     }
+
+    f << "VECTORS a double" << std::endl;
+    for (int i = 0; i < n ; i++) {
+        f << acc[3*i + 0] << " " << acc[3*i + 1] << " " << acc[3*i + 2] << " " << std::endl;
+    }
     f.close();
     return;
 }

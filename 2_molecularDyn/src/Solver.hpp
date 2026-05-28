@@ -16,7 +16,7 @@ class Solver {
     public:
     Solver(std::map<std::string, double> parameters);
     void initSolver();
-    void computeForceLJ(int index);
+    void computeForceLJ();
     void firstIntegratePBC();
     void finalIntegratePBC();
     void calculateEnergy();

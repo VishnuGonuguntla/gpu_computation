@@ -42,3 +42,6 @@ Your tasks are as follows:
 My Solution:
 
 In kernelCalculateEnergyPBC and kernelComputeForceLJ each for loop will work on one single particle. and since complexity is N^2, we have to go through another loop, so the index that we get is the particle that we should work on, then what does the thread number specify? (are both of them the same?)
+
+- [ ] Implement CellList
+- [ ] Figure out how to implement cellList in these cuda kernels.

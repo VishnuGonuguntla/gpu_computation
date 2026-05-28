@@ -5,6 +5,8 @@
 #include <random>
 #include <fstream>
 
+#include "CellList.hpp"
+
 class Solver {
     std::vector<double> mass; // contains n elements
     std::vector<double> radius; // contains n elements
@@ -13,10 +15,12 @@ class Solver {
     std::vector<double> pos; // contains 3*n elements
     std::map<std::string, double> params;
 
+    CellList cellList;
+
     public:
     Solver(std::map<std::string, double> parameters);
     void initSolver();
-    void computeForceLJ(int index);
+    void computeForceLJ();
     void firstIntegratePBC();
     void finalIntegratePBC();
     void calculateEnergy();

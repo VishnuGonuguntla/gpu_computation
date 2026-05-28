@@ -30,7 +30,6 @@ __global__ void kernelComputeForceLJ(double *d_pos, double *d_acc, double *d_mas
                                      double sigma, double cutoff, double eps) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     double fx = 0, fy = 0, fz = 0;
-    // EVERY thread must evaluate this condition, but cannot return early!
     if (i < nParticles) {
         for (int j = 0; j < nParticles; j++) {
             if (i==j) return;
@@ -112,10 +111,10 @@ void kernelCalculateEnergyPBC( double *d_pos, double *d_vel, double *d_acc, doub
                 double y = d_pos[3*j + 1] - d_pos[3*i + 1]; 
                 double z = d_pos[3*j + 2] - d_pos[3*i + 2];
 
-                // add minimum image ✓
-                // x -= boxSize * std::floor(x / boxSize);
-                // y -= boxSize * std::floor(y / boxSize);
-                // z -= boxSize * std::floor(z / boxSize);
+                x -= boxSize * std::floor(x / boxSize);
+                y -= boxSize * std::floor(y / boxSize);
+                z -= boxSize * std::floor(z / boxSize);
+
                 double dist2 = x*x + y*y + z*z; //xij^2
                 if (dist2 > 1e-10 && dist2 <= cutoff * cutoff) {
                     double sr2  = (sigma * sigma) / dist2;  // (σ/r)²

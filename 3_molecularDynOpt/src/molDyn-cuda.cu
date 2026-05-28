@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
     auto start = std::chrono::steady_clock::now();
 
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
-        std::cout << "Time: " << iter * timeStep << std::endl;
+        // std::cout << "Time: " << iter * timeStep << std::endl;
         solver.cudaFirstIntegratePBC(); // O(N)
         KERNEL_SYNC_CHECK();
 

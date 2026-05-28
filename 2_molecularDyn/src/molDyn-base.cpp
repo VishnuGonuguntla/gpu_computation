@@ -35,11 +35,8 @@ int main(int argc, char* argv[]) {
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
         solver.firstIntegratePBC(); // O(N)
 
-        for (int n = 0; n < nParticles; n++) {
+        solver.computeForceLJ(); // O(N^2)
 
-            solver.computeForceLJ(n); // O(N^2)
-
-        }
         solver.finalIntegratePBC(); // O(N)
         if (iter % calculateEnergy == 0) {
             std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
