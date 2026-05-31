@@ -42,7 +42,7 @@ __global__ void kernelComputeForceLJ(double *d_pos, double *d_acc, double *d_mas
         zCell = (zCell % cellsPerDim + cellsPerDim) % cellsPerDim;
 
         int neighborCellIndex = xCell * cellsPerDim * cellsPerDim + yCell * cellsPerDim + zCell;
-        // int particle = d_cell[neighborCellIndex];
+        int particle = d_cell[neighborCellIndex];
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dz = -1; dz <= 1; dz++) {
@@ -57,18 +57,16 @@ __global__ void kernelComputeForceLJ(double *d_pos, double *d_acc, double *d_mas
                         p = d_cellIndex[currentParticle];
                         if (currentParticle == i) continue;
 
-                        double x = d_pos[3*currentParticle + 0] - d_pos[3*i + 0]; 
-                        double y = d_pos[3*currentParticle + 1] - d_pos[3*i + 1]; 
-                        double z = d_pos[3*currentParticle + 2] - d_pos[3*i + 2];
+                        double x = d_pos[3*i + 0] - d_pos[3*currentParticle + 0]; 
+                        double y = d_pos[3*i + 1] - d_pos[3*currentParticle + 1]; 
+                        double z = d_pos[3*i + 2] - d_pos[3*currentParticle + 2];
 
                         // Periodic Boundary Conditions
-                        x -= boxSize * std::floor(x / boxSize);
-                        y -= boxSize * std::floor(y / boxSize);
-                        z -= boxSize * std::floor(z / boxSize);
+                        x -= boxSize * std::round(x / boxSize);
+                        y -= boxSize * std::round(y / boxSize);
+                        z -= boxSize * std::round(z / boxSize);
 
                         double dist2 = x*x + y*y + z*z;
-
-                        // Mask out calculations if self-interaction or past cutoff
                         if (dist2 > 1e-10 && dist2 < cutoff * cutoff) {
                             double sr2  = (sigma * sigma) / dist2;  
                             double sr6  = sr2 * sr2 * sr2;          
@@ -86,6 +84,9 @@ __global__ void kernelComputeForceLJ(double *d_pos, double *d_acc, double *d_mas
         d_acc[3*i + 0] = fx / d_mass[i];
         d_acc[3*i + 1] = fy / d_mass[i];
         d_acc[3*i + 2] = fz / d_mass[i];
+        // fx = 0, fy = 0, fz = 0;
+    }
+    
     //     for (int j = 0; j < nParticles; j++) {
     //         if (i==j) return;
     //         double x = d_pos[3*j + 0] - d_pos[3*i + 0]; 
@@ -115,7 +116,6 @@ __global__ void kernelComputeForceLJ(double *d_pos, double *d_acc, double *d_mas
     //     d_acc[3*i + 1] = fy / d_mass[i];
     //     d_acc[3*i + 2] = fz / d_mass[i];
         
-    }
 
 }
 __global__ void kernelFirstIntegratePBC(double *d_pos, double *d_vel, const double *d_acc,
@@ -155,22 +155,23 @@ __global__ void kernelFinalIntegratePBC(double *d_vel, const double *d_acc,
 __global__
 void kernelBuildCellList(double *d_pos, int *d_cell, int *d_cellIndex, int numCellsPerDim, int n, double cellSize) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < n) {
+        int xCell = static_cast<int>(std::floor(d_pos[3*i + 0] / cellSize));
+        int yCell = static_cast<int>(std::floor(d_pos[3*i + 1] / cellSize));
+        int zCell = static_cast<int>(std::floor(d_pos[3*i + 2] / cellSize));
 
-    int xCell = static_cast<int>(std::floor(d_pos[3*i + 0] / cellSize));
-    int yCell = static_cast<int>(std::floor(d_pos[3*i + 1] / cellSize));
-    int zCell = static_cast<int>(std::floor(d_pos[3*i + 2] / cellSize));
+        xCell = (xCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
+        yCell = (yCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
+        zCell = (zCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
 
-    xCell = (xCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
-    yCell = (yCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
-    zCell = (zCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
+        int index = xCell * numCellsPerDim * numCellsPerDim + yCell * numCellsPerDim + zCell;
+        // int temp = cell[index];
+        // cell[index] = i; // add particle to the front of the linked list for this cell
+        // cellIndex[i] = temp;
 
-    int index = xCell * numCellsPerDim * numCellsPerDim + yCell * numCellsPerDim + zCell;
-    // int temp = cell[index];
-    // cell[index] = i; // add particle to the front of the linked list for this cell
-    // cellIndex[i] = temp;
-
-    int old = atomicExch(&d_cell[index], i);   // swap cell[index] with i, get old head
-    d_cellIndex[i] = old;  
+        int old = atomicExch(&d_cell[index], i);   // swap cell[index] with i, get old head
+        d_cellIndex[i] = old;
+    }  
 }
 __global__
 void kernelCalculateEnergyPBC( double *d_pos, double *d_vel, double *d_acc, double *d_mass,

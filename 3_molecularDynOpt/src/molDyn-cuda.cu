@@ -32,10 +32,10 @@ int main(int argc, char* argv[]) {
     KERNEL_SYNC_CHECK();
     solver.cudaInitSolver();
     KERNEL_SYNC_CHECK();
-    solver.cudaBuildCellList();
-    KERNEL_SYNC_CHECK();
-    solver.cudaComputeForceLJ();
-    KERNEL_SYNC_CHECK();
+    // solver.cudaBuildCellList();
+    // KERNEL_SYNC_CHECK();
+    // solver.cudaComputeForceLJ();
+    // KERNEL_SYNC_CHECK();
     auto start = std::chrono::steady_clock::now();
 
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
@@ -51,19 +51,12 @@ int main(int argc, char* argv[]) {
         solver.cudaFinalIntegratePBC(); // O(N)
         KERNEL_SYNC_CHECK();
 
-        // if (iter % calculateEnergy == 0) {
-        //     std::cout << "TimeStep: " << iter*timeStep << " ;Energy: " << std::endl;
-        //     solver.cudaCalculateEnergy();
-        // }
-        // generate vtk every 100 timeSteps
-        // std::string outFile = "out_" + std::to_string(iter) + ".vtk";
-        // solver.writeVTK("output.vtk");
         if (iter % 100 == 0) {
             solver.copyToHost();
             KERNEL_SYNC_CHECK();
             // std::cout << solver.acc.size() << std::endl;
             std::string filename = "cudaOutputPBC_" + std::to_string(iter) + ".vtk";
-            solver.writeVTK(filename,iter);
+            solver.writeVTK(filename);
         }
     }
     auto end = std::chrono::steady_clock::now();

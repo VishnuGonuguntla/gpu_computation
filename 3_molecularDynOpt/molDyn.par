@@ -6,7 +6,7 @@
 # Geometry Data:
 # -------------
 
-nParticles 4000
+nParticles 10000
 rCutoff 2.5
 radius 0.5
 youngsModulus 200.0
@@ -19,7 +19,7 @@ mass 1
 sigma 1
 eps 1
 kT 1
-boxSize 30
+boxSize 60
 
 # Iteration Data:
 # -------------------

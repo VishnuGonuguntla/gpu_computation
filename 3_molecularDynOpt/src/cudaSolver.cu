@@ -73,7 +73,7 @@ void Solver::cudaCalculateEnergy() {
     double eps = params["eps"];
     double sigma = params["sigma"];
     double boxSize = params["boxSize"];
-    double cutoff = sigma * 2.5;
+    double cutoff = params["rCutoff"];
 
     dim3 block(512);
     dim3 grid((nParticles + block.x - 1) / block.x);
@@ -99,7 +99,7 @@ void Solver::cudaBuildCellList() {
     kernelBuildCellList<<<grid, block>>>(d_pos, d_cell, d_cellIndex, numCellsPerDim, n, this->cellSize);
 }
 
-void Solver::writeVTK(std::string filename, int iter) {
+void Solver::writeVTK(std::string filename) {
 
     int n = params["nParticles"];
     std::ofstream f;
@@ -108,11 +108,10 @@ void Solver::writeVTK(std::string filename, int iter) {
         std::cerr << "!!! ERROR File not open" << std::endl;
         return;
     }
-    // if (iter == 0) {
-        f << "# vtk DataFile Version 4.0" << std::endl;
-        f << "hesp visualization file" << std::endl;
-        f << "ASCII" << std::endl;
-    // }
+    f << "# vtk DataFile Version 4.0" << std::endl;
+    f << "hesp visualization file" << std::endl;
+    f << "ASCII" << std::endl;
+
     f << "DATASET UNSTRUCTURED_GRID" << std::endl;
     f << "POINTS " << n << " double" << std::endl;
     for (int i = 0; i < n ; i++) {

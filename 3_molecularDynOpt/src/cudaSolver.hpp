@@ -117,6 +117,6 @@ public:
     void cudaCalculateEnergy();
 
     void cudaBuildCellList();
-    void writeVTK(std::string filename, int iter);
+    void writeVTK(std::string filename);
     ~Solver() { freeDevice(); }
 };
