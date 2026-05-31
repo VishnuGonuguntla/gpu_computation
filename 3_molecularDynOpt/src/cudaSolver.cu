@@ -11,6 +11,8 @@ void Solver::cudaInitSolver() {
     double kT = params["kT"];
     int gridSize = std::ceil(std::cbrt(nParticles));
     double spacing = boxSize / gridSize;
+    std::cout << "Grid Size: " << gridSize << std::endl;
+    std::cout << "Spacing: " << spacing << std::endl;
 
     double* d_raw;
     cudaMalloc(&d_raw, 3*n * sizeof(double));
@@ -35,12 +37,12 @@ void Solver::cudaComputeForceLJ() {
     double boxSize = params["boxSize"];
     double nParticles = params["nParticles"];
     double sigma = params["sigma"];
-    double cutoff = sigma * 2.5;
+    double cutoff = params["rCutoff"];
     double eps = params["eps"];
     dim3 block(512);
     dim3 grid((nParticles + block.x - 1) / block.x);
-    
-    kernelComputeForceLJ<<<grid, block>>>(d_pos, d_acc, d_mass, nParticles, boxSize, sigma, cutoff, eps);
+
+    kernelComputeForceLJ<<<grid, block>>>(d_pos, d_acc, d_mass, d_cell, d_cellIndex, nParticles, boxSize, sigma, cutoff, eps, numCellsPerDim, cellSize);
 }
 
 void Solver::cudaFirstIntegratePBC() {
@@ -82,11 +84,26 @@ void Solver::cudaCalculateEnergy() {
     std::cout << "Energy: " << totalEnergy << std::endl;
 }
 
+void Solver::cudaBuildCellList() {
+    int nParticles = params["nParticles"];
+
+    int numCells = this->numCells;
+    int numCellsPerDim = this->numCellsPerDim;
+
+
+    CUDA_CHECK(cudaMemset(d_cell, -1, numCells * sizeof(int)));
+    CUDA_CHECK(cudaMemset(d_cellIndex, -1, nParticles * sizeof(int)));
+
+    dim3 block(512);
+    dim3 grid((nParticles + block.x - 1) / block.x);
+    kernelBuildCellList<<<grid, block>>>(d_pos, d_cell, d_cellIndex, numCellsPerDim, n, this->cellSize);
+}
+
 void Solver::writeVTK(std::string filename, int iter) {
 
     int n = params["nParticles"];
     std::ofstream f;
-    f.open(filename, std::ios_base::app);
+    f.open(filename);
     if (!f.is_open()) {
         std::cerr << "!!! ERROR File not open" << std::endl;
         return;
@@ -115,6 +132,11 @@ void Solver::writeVTK(std::string filename, int iter) {
     f << "VECTORS v double" << std::endl;
     for (int i = 0; i < n ; i++) {
         f << vel[3*i + 0] << " " << vel[3*i + 1] << " " << vel[3*i + 2] << " " << std::endl;
+    }
+
+    f << "VECTORS a double" << std::endl;
+    for (int i = 0; i < n ; i++) {
+        f << acc[3*i + 0] << " " << acc[3*i + 1] << " " << acc[3*i + 2] << " " << std::endl;
     }
     f.close();
     return;

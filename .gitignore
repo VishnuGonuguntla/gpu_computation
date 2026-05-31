@@ -40,3 +40,5 @@
 # debug information files
 *.dwo
 
+3_molecularDynOpt/build
+3_molecularDynOpt/data
