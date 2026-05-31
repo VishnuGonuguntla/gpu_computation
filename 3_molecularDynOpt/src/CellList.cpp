@@ -8,6 +8,7 @@ CellList::CellList(std::map<std::string, double> params) {
     this->numCells = numCellsPerDim * numCellsPerDim * numCellsPerDim;
     this->cell.resize(this->numCells, -1);
     this->cellIndex.resize(params["nParticles"], -1);
+    std::cout << "cutoff " << cutoff << std::endl;
     std::cout << "No. of Cells " << numCells << std::endl;
     std::cout << "numCellsPerDimension: " << numCellsPerDim << std::endl;
 }
@@ -20,14 +21,13 @@ void CellList::build(std::vector<double>& pos) {
 
     // Build new cell list
     for (int i = 0; i < numParticles; i++) {
-        int xCell = static_cast<int>(pos[3*i + 0] / cellSize);
-        int yCell = static_cast<int>(pos[3*i + 1] / cellSize);
-        int zCell = static_cast<int>(pos[3*i + 2] / cellSize);
+        int xCell = static_cast<int>(std::floor(pos[3*i + 0] / cellSize));
+        int yCell = static_cast<int>(std::floor(pos[3*i + 1] / cellSize));
+        int zCell = static_cast<int>(std::floor(pos[3*i + 2] / cellSize));
 
-        // // Ensure indices are within bounds
-        // xCell = std::min(xCell, numCellsPerDim - 1);
-        // yCell = std::min(yCell, numCellsPerDim - 1);
-        // zCell = std::min(zCell, numCellsPerDim - 1);
+        xCell = (xCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
+        yCell = (yCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
+        zCell = (zCell % numCellsPerDim + numCellsPerDim) % numCellsPerDim;
 
         int index = xCell * numCellsPerDim * numCellsPerDim + yCell * numCellsPerDim + zCell;
         int temp = cell[index];

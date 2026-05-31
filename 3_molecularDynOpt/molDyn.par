@@ -6,8 +6,8 @@
 # Geometry Data:
 # -------------
 
-nParticles 10000
-rCutoff 1.0
+nParticles 4000
+rCutoff 2.5
 radius 0.5
 youngsModulus 200.0
 poissonRatio 0.3
@@ -19,11 +19,11 @@ mass 1
 sigma 1
 eps 1
 kT 1
-boxSize 20
+boxSize 30
 
 # Iteration Data:
 # -------------------
-timeStep 0.1
+timeStep 0.001
 nTime 1
 epsilon 0.0000001
 omg 1.0

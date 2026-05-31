@@ -23,8 +23,8 @@ boxSize 20
 # Iteration Data:
 # -------------------
 
-timeStep 0.01
-nTime 10
+timeStep 0.001
+nTime 1
 epsilon 0.0000001
 omg 1.0
 neighborRebuild 20

@@ -49,7 +49,7 @@ void Solver::computeForceLJ() {
     double fx = 0, fy = 0, fz = 0;
     for (int i = 0; i < nParticles; i++) {
         for (int j = 0; j < nParticles; j++) {
-            if (index == i) continue;
+            if (j == i) continue;
             double x = pos[3*i + 0] - pos[3*j + 0]; 
             double y = pos[3*i + 1] - pos[3*j + 1]; 
             double z = pos[3*i + 2] - pos[3*j + 2];

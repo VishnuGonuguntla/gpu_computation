@@ -21,32 +21,38 @@ int main(int argc, char* argv[]) {
 
     Solver solver(parameters);
     solver.initSolver();
+    // solver.writeVTK("initial.vtk");
     initialStats(parameters);
 
     int nParticles = (int)parameters["nParticles"];
     double timeStep = parameters["timeStep"];
     double nTimeSteps = parameters.at("nTime") / timeStep;
     int calculateEnergy = (int)parameters["calculateEnergy"];
+
     auto start = std::chrono::steady_clock::now();
-    for (int i = 0; i < 10; i++)
     solver.cellList.build(solver.pos);
+    solver.computeForceLJ(); // compute initial forces at t=0
 
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
         solver.firstIntegratePBC(); // O(N)
-        // for (int n = 0; n < nParticles; n++) {
+
+        solver.cellList.build(solver.pos);        
 
         solver.computeForceLJ(); // O(N^2)
-        std::cout << "Done" << std::endl;
 
-        // }
         solver.finalIntegratePBC(); // O(N)
-        if (iter % calculateEnergy == 0) {
-            std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
-            solver.calculateEnergy();
-        }
+        // if (iter % calculateEnergy == 0) {
+        //     std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
+        //     solver.calculateEnergy();
+        // }
         // generate vtk every 100 timeSteps
+        if (iter % 100 == 0) {
+            std::string outFile = "out_" + std::to_string(iter) + ".vtk";
+            solver.writeVTK(outFile);
+        }
         // std::string outFile = "out_" + std::to_string(iter) + ".vtk";
-        // solver.writeVTK("output.vtk");
+        // solver.writeVTK(outFile);
+
     }
     auto end = std::chrono::steady_clock::now();
     printStats(end-start, nParticles, (int)nTimeSteps);
