@@ -28,15 +28,17 @@ int main(int argc, char* argv[]) {
     double nTimeSteps = parameters.at("nTime") / timeStep;
     int calculateEnergy = (int)parameters["calculateEnergy"];
     auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 10; i++)
+    solver.cellList.build(solver.pos);
 
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
         solver.firstIntegratePBC(); // O(N)
+        // for (int n = 0; n < nParticles; n++) {
 
-        for (int n = 0; n < nParticles; n++) {
+        solver.computeForceLJ(); // O(N^2)
+        std::cout << "Done" << std::endl;
 
-            solver.computeForceLJ(n); // O(N^2)
-
-        }
+        // }
         solver.finalIntegratePBC(); // O(N)
         if (iter % calculateEnergy == 0) {
             std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";

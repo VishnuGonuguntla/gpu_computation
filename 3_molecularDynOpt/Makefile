@@ -10,8 +10,8 @@ PARAMETERS = molDyn.par 1
 
 targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-cuda
 
-$(BUILD_DIR)/$(TEST_CASE)-base: $(SRC_DIR)/$(TEST_CASE)-base.cpp $(SRC_DIR)/Helper.cpp $(SRC_DIR)/Solver.cpp $(SRC_DIR)/util.h
-	${CC} $(C_FLAGS) -o $(BUILD_DIR)/$(TEST_CASE)-base $(SRC_DIR)/$(TEST_CASE)-base.cpp $(SRC_DIR)/Solver.cpp
+$(BUILD_DIR)/$(TEST_CASE)-base: $(SRC_DIR)/$(TEST_CASE)-base.cpp $(SRC_DIR)/Helper.cpp $(SRC_DIR)/Solver.cpp $(SRC_DIR)/CellList.cpp $(SRC_DIR)/util.h
+	${CC} $(C_FLAGS) -o $(BUILD_DIR)/$(TEST_CASE)-base $(SRC_DIR)/$(TEST_CASE)-base.cpp $(SRC_DIR)/Solver.cpp $(SRC_DIR)/CellList.cpp
 
 $(BUILD_DIR)/$(TEST_CASE)-cuda: $(SRC_DIR)/$(TEST_CASE)-cuda.cu $(SRC_DIR)/cudaSolver.cu $(SRC_DIR)/kernels.cuh $(SRC_DIR)/cuda-util.cuh
 	${NVCC} $(CUDA_FLAGS) -o $(BUILD_DIR)/$(TEST_CASE)-cuda $(SRC_DIR)/$(TEST_CASE)-cuda.cu $(SRC_DIR)/cudaSolver.cu

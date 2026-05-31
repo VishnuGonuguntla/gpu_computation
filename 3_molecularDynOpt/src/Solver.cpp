@@ -2,6 +2,8 @@
 
 Solver::Solver(std::map<std::string, double> parameters) {
     params = parameters;
+    cellList = CellList(parameters);
+    std::cout << "numCellsPerDim " << cellList.numCellsPerDim << std::endl;
 }
 
 void Solver::initSolver() {
@@ -46,37 +48,77 @@ void Solver::computeForceLJ() {
     double sigma = params["sigma"];
     double cutoff = sigma * 2.5;
     double eps = params["eps"];
+    double cellSize = cellList.cellSize;
+    int cellsPerDim = cellList.numCellsPerDim;
+    std::cout << "cellSize: " << cellSize << std::endl;
+    std::cout << "cellsPerDim: " << cellsPerDim << std::endl;
+    std::cout << cellList.cell.size() << " " << cellList.cellIndex.size() << std::endl;
+    int p = cellList.cell[455];
+    for (int c = 0; c < 1000; c++) {
+    int particle = cellList.cell[c];
+    if (particle == -1) continue;   // skip empty cells
+    
+    std::cout << "cell " << c << ": ";
+    while (particle != -1) {
+        std::cout << particle << " -> ";
+        particle = cellList.cellIndex[particle];
+    }
+    std::cout << "-1" << std::endl;
+    }
+
     double fx = 0, fy = 0, fz = 0;
     for (int i = 0; i < nParticles; i++) {
-        for (int j = 0; j < nParticles; j++) {
-            if (j == i) continue;
-            // std::cout << pos.size() << " " << vel.size() << " " <<  acc.size() << std::endl;
-            double x = pos[3*i + 0] - pos[3*j + 0]; 
-            double y = pos[3*i + 1] - pos[3*j + 1]; 
-            double z = pos[3*i + 2] - pos[3*j + 2];
 
-            x -= boxSize * std::round(x / boxSize);
-            y -= boxSize * std::round(y / boxSize);
-            z -= boxSize * std::round(z / boxSize);
+      
+        int xCell = static_cast<int>(pos[3*i + 0] / cellSize);
+        int yCell = static_cast<int>(pos[3*i + 1] / cellSize);
+        int zCell = static_cast<int>(pos[3*i + 2] / cellSize);
+        int neighborCellIndex = xCell * cellsPerDim * cellsPerDim + yCell * cellsPerDim + zCell;
+                    int particle = cellList.cell[neighborCellIndex];
+                    std::cout << "Particle " << i << " is in cell (" << xCell << ", " << yCell << ", " << zCell << ") with index " << neighborCellIndex << std::endl;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    int neighborX = (xCell + dx + cellsPerDim) % cellsPerDim;
+                    int neighborY = (yCell + dy + cellsPerDim) % cellsPerDim;
+                    int neighborZ = (zCell + dz + cellsPerDim) % cellsPerDim;
+                    int neighborCellIndex = neighborX * cellsPerDim * cellsPerDim + neighborY * cellsPerDim + neighborZ;
+                    int particle = cellList.cell[neighborCellIndex];
 
-            double dist2 = x*x + y*y + z*z; //xij^2
-            if (dist2 < 1e-10) continue;
-            if (dist2 > cutoff * cutoff) continue;
+                    // Loop over particles in the neighboring cell
+                    while (particle != -1) { 
+                        if (particle != i) {
+                            double x = pos[3*i + 0] - pos[3*particle + 0]; 
+                            double y = pos[3*i + 1] - pos[3*particle + 1]; 
+                            double z = pos[3*i + 2] - pos[3*particle + 2];
 
-            double sr2  = (sigma * sigma) / dist2;  // (σ/r)²
-            double sr6  = sr2 * sr2 * sr2;          // (σ/r)^6  — avoids expensive pow()
-            double sr12 = sr6 * sr6;                // (σ/r)^12
-            double constval = 24 * eps * (2 * sr12 - sr6) / dist2;
+                            x -= boxSize * std::round(x / boxSize);
+                            y -= boxSize * std::round(y / boxSize);
+                            z -= boxSize * std::round(z / boxSize);
 
-            fx += constval * x;
-            fy += constval * y;
-            fz += constval * z;
+                            double dist2 = x*x + y*y + z*z; //xij^2
+                            if (dist2 < 1e-10 || dist2 > cutoff * cutoff) continue;
+
+                            double sr2  = (sigma * sigma) / dist2;  // (σ/r)²
+                            double sr6  = sr2 * sr2 * sr2;          // (σ/r)^6  — avoids expensive pow()
+                            double sr12 = sr6 * sr6;                // (σ/r)^12
+                            double constval = 24 * eps * (2 * sr12 - sr6) / dist2;
+
+                            fx += constval * x;
+                            fy += constval * y;
+                            fz += constval * z;
+                    }
+                    particle = cellList.cellIndex[particle];
+                    }
+                }
+            }
         }
+        acc[3*i + 0] = fx / mass[i];
+        acc[3*i + 1] = fy / mass[i];
+        acc[3*i + 2] = fz / mass[i];
+
         fx = 0; fy = 0; fz = 0; // reset forces for next iteration
     }
-    acc[3*index + 0] = fx / mass[index];
-    acc[3*index + 1] = fy / mass[index];
-    acc[3*index + 2] = fz / mass[index];
 }
 
 void Solver::firstIntegratePBC() {
@@ -109,14 +151,6 @@ void Solver::finalIntegratePBC() {
     double timeStep = params["timeStep"];
 
     for (int i = 0; i < nParticles; i++) {
-
-        double vx = vel[3*i + 0];
-        double vy = vel[3*i + 1];
-        double vz = vel[3*i + 2];
-        
-        double ax = acc[3*i + 0];
-        double ay = acc[3*i + 1];
-        double az = acc[3*i + 2];
         // (t + delT)
         vel[3*i + 0] = vel[3*i + 0] + 0.5 * acc[3*i + 0] * timeStep;
         vel[3*i + 1] = vel[3*i + 1] + 0.5 * acc[3*i + 1] * timeStep;

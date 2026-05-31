@@ -6,7 +6,7 @@
 # Geometry Data:
 # -------------
 
-nParticles 4000
+nParticles 10000
 rCutoff 1.0
 radius 0.5
 youngsModulus 200.0
@@ -23,8 +23,8 @@ boxSize 20
 
 # Iteration Data:
 # -------------------
-timeStep 0.001
-nTime 10
+timeStep 0.1
+nTime 1
 epsilon 0.0000001
 omg 1.0
 rebuildCellList 10

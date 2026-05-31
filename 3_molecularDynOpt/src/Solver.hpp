@@ -8,6 +8,7 @@
 #include "CellList.hpp"
 
 class Solver {
+    public:
     std::vector<double> mass; // contains n elements
     std::vector<double> radius; // contains n elements
     std::vector<double> acc; // contains 3*n elements
@@ -17,7 +18,6 @@ class Solver {
 
     CellList cellList;
 
-    public:
     Solver(std::map<std::string, double> parameters);
     void initSolver();
     void computeForceLJ();
