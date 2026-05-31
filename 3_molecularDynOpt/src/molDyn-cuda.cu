@@ -32,10 +32,10 @@ int main(int argc, char* argv[]) {
     KERNEL_SYNC_CHECK();
     solver.cudaInitSolver();
     KERNEL_SYNC_CHECK();
-    // solver.cudaBuildCellList();
-    // KERNEL_SYNC_CHECK();
-    // solver.cudaComputeForceLJ();
-    // KERNEL_SYNC_CHECK();
+    solver.cudaBuildCellList();
+    KERNEL_SYNC_CHECK();
+    solver.cudaComputeForceLJ();
+    KERNEL_SYNC_CHECK();
     auto start = std::chrono::steady_clock::now();
 
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {

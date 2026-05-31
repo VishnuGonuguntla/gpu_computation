@@ -22,7 +22,9 @@ void Solver::cudaInitSolver() {
     double sigma = std::sqrt(kT/mass);
 
     // fill with gaussian mean=0, std=1
-    curandGenerateNormalDouble(gen, d_raw, 3*n, 0.0, 1.0);
+    // curandGenerateNormalDouble(gen, d_raw, 3*n, 0.0, 1.0);
+    curandGenerateNormalDouble(gen, d_raw, 3 * n, 0.0, sigma);
+
     dim3 block(8, 8, 8);
     dim3 grid((gridSize + block.x - 1) / block.x, (gridSize + block.y - 1) / block.y, (gridSize + block.z - 1) / block.z);
 

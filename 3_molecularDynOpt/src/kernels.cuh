@@ -10,19 +10,21 @@ void kernelInitSolver(double *d_pos, double *d_vel, double *d_acc, double *d_mas
     int k = blockDim.z * blockIdx.z + threadIdx.z;
     
     int n = i * gridSize * gridSize + j * gridSize + k;
-    if (n < nParticles) {
-        d_mass[n] = mass;
-        // d_radius[n] = radius;
-        d_vel[3*n + 0] = raw[3*n + 0];
-        d_vel[3*n + 1] = raw[3*n + 1];
-        d_vel[3*n + 2] = raw[3*n + 2];
-        d_acc[3*n + 0] = 0;
-        d_acc[3*n + 1] = 0;
-        d_acc[3*n + 2] = 0;
-        d_pos[3*n + 0] = (i + 0.5) * spacing;
-        d_pos[3*n + 1] = (j + 0.5) * spacing;
-        d_pos[3*n + 2] = (k + 0.5) * spacing;
-        
+    if (i < gridSize && j < gridSize && k < gridSize) {
+        if (n < nParticles) {
+            d_mass[n] = mass;
+            // d_radius[n] = radius;
+            d_vel[3*n + 0] = raw[3*n + 0];
+            d_vel[3*n + 1] = raw[3*n + 1];
+            d_vel[3*n + 2] = raw[3*n + 2];
+            d_acc[3*n + 0] = 0;
+            d_acc[3*n + 1] = 0;
+            d_acc[3*n + 2] = 0;
+            d_pos[3*n + 0] = (i + 0.5) * spacing;
+            d_pos[3*n + 1] = (j + 0.5) * spacing;
+            d_pos[3*n + 2] = (k + 0.5) * spacing;
+            
+        }
     }
 }
 __global__ void kernelComputeForceLJ(double *d_pos, double *d_acc, double *d_mass,
