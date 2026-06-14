@@ -1,0 +1,32 @@
+A100
+hesp165v@a0905:~/gpu_computation/3_molecularDynOpt$ make serial
+g++ -O3 -march=native -std=c++17 -o build/molDyn-base src/molDyn-base.cpp src/Solver.cpp src/CellList.cpp
+Base:
+build/molDyn-base molDyn.par 1
+cutoff 2.5
+No. of Cells 64000
+numCellsPerDimension: 40
+Grid Size: 47
+Spacing: 2.12766
+Particles: 100000
+StepSize: 0.001
+TotalTime: 10 Iterations: 10000
+  elapsed time:  918.879 s
+  MLUP/s:        1.08828
+
+CUDA:
+build/molDyn-cuda molDyn.par 1
+cutoff 2.5
+No. of Cells 64000
+numCellsPerDimension: 40
+Particles: 100000
+StepSize: 0.001
+TotalTime: 10 Iterations: 10000
+Grid Size: 47
+Spacing: 2.12766
+  #Particles / #Iterations:  100000 / 10000
+  elapsed time:  102.511 s
+  MLUP/s:        9.75505
+
+
+

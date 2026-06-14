@@ -23,6 +23,7 @@ int main(int argc, char* argv[]) {
     Solver solver(parameters);
 
     initialStats(parameters);
+    
     int nParticles = (int)parameters["nParticles"];
     double timeStep = parameters["timeStep"];
     double nTimeSteps = parameters.at("nTime") / timeStep;
@@ -36,18 +37,22 @@ int main(int argc, char* argv[]) {
     KERNEL_SYNC_CHECK();
     solver.cudaComputeForceLJ();
     KERNEL_SYNC_CHECK();
+    double totalComputeTime = 0.0;
     auto start = std::chrono::steady_clock::now();
 
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
         // std::cout << "Time: " << iter * timeStep << std::endl;
-
         solver.cudaFirstIntegratePBC(); // O(N)
         KERNEL_SYNC_CHECK();
         solver.cudaBuildCellList();
         KERNEL_SYNC_CHECK();
+        auto startCompute = std::chrono::steady_clock::now();
         solver.cudaComputeForceLJ(); // O(N^2)
         KERNEL_SYNC_CHECK();
-        
+        auto endCompute = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsedSeconds = endCompute - startCompute;
+        // std::cout << "Time: " << elapsedSeconds.count() << std::endl;
+        totalComputeTime += elapsedSeconds.count();
         solver.cudaFinalIntegratePBC(); // O(N)
         KERNEL_SYNC_CHECK();
 
@@ -56,9 +61,12 @@ int main(int argc, char* argv[]) {
             KERNEL_SYNC_CHECK();
             // std::cout << solver.acc.size() << std::endl;
             std::string filename = "outParallel_" + std::to_string(iter) + ".vtk";
+            // std::cout << "start2" << std::endl;
             solver.writeVTK(filename);
+            // std::cout << "start2" << std::endl;
         }
     }
+    std::cout << "Average Compute Time: " << totalComputeTime / nTimeSteps << " seconds" << std::endl;
     auto end = std::chrono::steady_clock::now();
     printStats(end-start, nParticles, (int)nTimeSteps);
     // solver.copyToHost();

@@ -47,9 +47,13 @@ int main(int argc, char* argv[]) {
         // }
         // generate vtk every 100 timeSteps
         if (iter % 100 == 0) {
-            std::cout << "TimeStep: " << iter*timeStep << " ;Energy: " << std::endl; 
+            // std::cout << "TimeStep: " << iter*timeStep << " ;Energy: " << std::endl; 
             std::string outFile = "outSerial_" + std::to_string(iter) + ".vtk";
+            auto startWrite = std::chrono::steady_clock::now();
             solver.writeVTK(outFile);
+            auto endWrite = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsedSeconds = endWrite - startWrite;
+            std::cout << "Time: " << elapsedSeconds.count() << std::endl;
         }
         // std::string outFile = "out_" + std::to_string(iter) + ".vtk";
         // solver.writeVTK(outFile);
