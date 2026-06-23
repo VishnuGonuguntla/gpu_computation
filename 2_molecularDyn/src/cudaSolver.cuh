@@ -15,7 +15,7 @@ class Solver {
 public:
     // host data
     int n;
-    std::vector<double> pos, vel, acc, mass, radius;
+    std::vector<double> pos, vel, acc, mass;
     std::map<std::string, double> params;
     Solver(std::map<std::string, double> parameters) {
         params = parameters;
@@ -25,7 +25,6 @@ public:
     double* d_pos  = nullptr;
     double* d_vel  = nullptr;
     double* d_acc  = nullptr;
-    double* d_radius = nullptr;
     double* d_mass = nullptr;
     double *d_totalEnergy = nullptr;
     double *d_kEnergy = nullptr;
@@ -38,7 +37,6 @@ public:
         CUDA_CHECK(cudaMalloc(&d_vel,  3*size));
         CUDA_CHECK(cudaMalloc(&d_acc,  3*size));
         CUDA_CHECK(cudaMalloc(&d_mass,  size));
-        CUDA_CHECK(cudaMalloc(&d_radius,size));
         CUDA_CHECK(cudaMalloc(&d_totalEnergy, sizeof(double)));
         CUDA_CHECK(cudaMalloc(&d_kEnergy, sizeof(double)));
         CUDA_CHECK(cudaMalloc(&d_pEnergy, sizeof(double)));
@@ -46,7 +44,6 @@ public:
         CUDA_CHECK(cudaMemset(d_pos, 0, 3 * size));
         CUDA_CHECK(cudaMemset(d_vel, 0, 3 * size));
         CUDA_CHECK(cudaMemset(d_acc, 0, 3 * size));
-        CUDA_CHECK(cudaMemset(d_radius, 0, size));
         CUDA_CHECK(cudaMemset(d_mass, 0, size));
     }
 
@@ -55,7 +52,6 @@ public:
         CUDA_CHECK(cudaMemcpy(d_vel,  vel.data(),  3*n*sizeof(double), cudaMemcpyHostToDevice));
         CUDA_CHECK(cudaMemcpy(d_acc,  acc.data(),  3*n*sizeof(double), cudaMemcpyHostToDevice));
         CUDA_CHECK(cudaMemcpy(d_mass, mass.data(),   n*sizeof(double), cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(d_radius, radius.data(),   n*sizeof(double), cudaMemcpyHostToDevice));
     }
 
     void copyToHost() {
@@ -75,7 +71,7 @@ public:
         CUDA_CHECK(cudaFree(d_vel));
         CUDA_CHECK(cudaFree(d_acc));
         CUDA_CHECK(cudaFree(d_mass));
-        CUDA_CHECK(cudaFree(d_radius));
+
         CUDA_CHECK(cudaFree(d_totalEnergy));
         CUDA_CHECK(cudaFree(d_kEnergy));
         CUDA_CHECK(cudaFree(d_pEnergy));

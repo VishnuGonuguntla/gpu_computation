@@ -42,4 +42,5 @@
 
 3_molecularDynOpt/build
 3_molecularDynOpt/data
+2_molecularDyn/data
 3_molecularDynOpt/*.vtk

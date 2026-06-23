@@ -31,6 +31,7 @@ int main(int argc, char* argv[]) {
     int calculateEnergy = (int)parameters["calculateEnergy"];
     int writeVtk = (int)parameters["writeVtk"];
     auto start = std::chrono::steady_clock::now();
+    solver.computeForceLJ(); // O(N^2)
 
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
         solver.firstIntegratePBC(); // O(N)
@@ -38,12 +39,12 @@ int main(int argc, char* argv[]) {
         solver.computeForceLJ(); // O(N^2)
 
         solver.finalIntegratePBC(); // O(N)
-        if (iter % calculateEnergy == 0) {
-            std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
-            solver.calculateEnergy();
-        }
+        // if (iter % calculateEnergy == 0) {
+        //     std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
+        //     solver.calculateEnergy();
+        // }
         if (iter % writeVtk == 0 && genVTK) {
-            std::string filename = "outputSerial_" + std::to_string(iter) + ".vtk";
+            std::string filename = "data/outputSerial_" + std::to_string(iter) + ".vtk";
             solver.writeVTK(filename);
         }
     }

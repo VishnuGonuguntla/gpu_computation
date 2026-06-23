@@ -1,13 +1,10 @@
 #include "kernels.cuh" // cuda Kernels
-#include <cub/cub.cuh>
-
-#include "cudaSolver.hpp" // Host Function Declaration
+#include "cudaSolver.cuh" // Host Function Declaration
 
 void Solver::cudaInitSolver() {
     int nParticles = params["nParticles"];
     double boxSize = params["boxSize"];
     double mass = params["mass"];
-    double radius = params["radius"];
     double kT = params["kT"];
     int gridSize = std::ceil(std::cbrt(nParticles));
 #ifdef DEBUG
@@ -25,11 +22,11 @@ void Solver::cudaInitSolver() {
     double sigma = std::sqrt(kT/mass);
 
     // fill with gaussian mean=0, std=1
-    curandGenerateNormalDouble(gen, d_raw, 3*n, 0.0, 1.0);
+    curandGenerateNormalDouble(gen, d_raw, 3*nParticles, 0.0, sigma);
     dim3 block(8, 8, 8);
     dim3 grid((gridSize + block.x - 1) / block.x, (gridSize + block.y - 1) / block.y, (gridSize + block.z - 1) / block.z);
 
-    kernelInitSolver<<<grid, block>>>(d_pos, d_vel, d_acc, d_mass, nParticles, gridSize, mass, radius,
+    kernelInitSolver<<<grid, block>>>(d_pos, d_vel, d_acc, d_mass, nParticles, gridSize, mass,
                                       d_raw, spacing);
 
     curandDestroyGenerator(gen);
@@ -38,7 +35,7 @@ void Solver::cudaInitSolver() {
 
 void Solver::cudaComputeForceLJ() {
     double boxSize = params["boxSize"];
-    double nParticles = params["nParticles"];
+    int nParticles = (int)params["nParticles"];
     double sigma = params["sigma"];
     double cutoff = sigma * 2.5;
     double eps = params["eps"];
@@ -57,7 +54,7 @@ void Solver::cudaFirstIntegratePBC() {
     dim3 block(512);
     dim3 grid((nParticles + block.x - 1) / block.x);
     
-    kernelFirstIntegratePBC<<<grid, block>>>(d_pos, d_vel, d_acc, nParticles, timeStep, boxSize);
+    kernelFirstIntegratePBC<<<grid, block>>>(d_pos, d_vel, d_acc, nParticles, timeStep);
 }
 
 void Solver::cudaFinalIntegratePBC() {

@@ -7,7 +7,7 @@
 # -------------
 
 nParticles 1000
-rCutoff 1.0
+rCutoff 2.5
 radius 0.5
 youngsModulus 200.0
 poissonRatio 0.3
@@ -17,7 +17,7 @@ rEffective 0.5
 mass 1
 sigma 1
 eps 1
-kT 4
+kT 1
 boxSize 20
 
 # Iteration Data:
@@ -28,7 +28,7 @@ nTime 1
 epsilon 0.0000001
 omg 1.0
 neighborRebuild 20
-calculateEnergy 100
+calculateEnergy 10
 writeVtk 100
 
 +=================================

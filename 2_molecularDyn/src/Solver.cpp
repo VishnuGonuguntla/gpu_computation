@@ -10,7 +10,6 @@ void Solver::initSolver() {
     double kT = params["kT"];
 
     mass.resize(n, params["mass"]);
-    radius.resize(n, params["radius"]);
     acc.resize(3*n, 0);
     pos.resize(3*n, 0);
     vel.resize(3*n, 0);
@@ -25,9 +24,10 @@ void Solver::initSolver() {
     }
     int gridSize = std::ceil(std::cbrt(n));
     double spacing = boxSize / gridSize;
-    std::cout << "Grid Size: " << gridSize << std::endl;
-    std::cout << "Spacing: " << spacing << std::endl;
+    std::cout << "Grid Size: " << gridSize;
+    std::cout << " | Spacing: " << spacing << std::endl;
     int idx = 0;
+    
     for (int ix = 0; ix < gridSize && idx < n; ix++) {
         for (int iy = 0; iy < gridSize && idx < n; iy++) {
             for (int iz = 0; iz < gridSize && idx < n; iz++) {
@@ -54,9 +54,9 @@ void Solver::computeForceLJ() {
             double y = pos[3*i + 1] - pos[3*j + 1]; 
             double z = pos[3*i + 2] - pos[3*j + 2];
 
-            x -= boxSize * std::round(x / boxSize);
-            y -= boxSize * std::round(y / boxSize);
-            z -= boxSize * std::round(z / boxSize);
+            // x -= boxSize * std::round(x / boxSize);
+            // y -= boxSize * std::round(y / boxSize);
+            // z -= boxSize * std::round(z / boxSize);
 
             double dist2 = x*x + y*y + z*z; //xij^2
             if (dist2 < 1e-10) continue;
@@ -73,8 +73,8 @@ void Solver::computeForceLJ() {
         acc[3*i + 0] = fx / mass[i];
         acc[3*i + 1] = fy / mass[i];
         acc[3*i + 2] = fz / mass[i];
+        fx = fy = fz = 0; // reset forces for next iteration
     }
-    fx = fy = fz = 0; // reset forces for next iteration
 }
 
 
@@ -91,9 +91,9 @@ void Solver::firstIntegratePBC() {
         pos[3*i + 2] = pos[3*i + 2] + vel[3*i + 2] * timeStep + 0.5 * acc[3*i + 2] * timeStep2;
 
         // after updating positions, wrap them back into box
-        pos[3*i+0] -= boxSize * std::floor(pos[3*i+0] / boxSize);
-        pos[3*i+1] -= boxSize * std::floor(pos[3*i+1] / boxSize);
-        pos[3*i+2] -= boxSize * std::floor(pos[3*i+2] / boxSize);
+        // pos[3*i+0] -= boxSize * std::floor(pos[3*i+0] / boxSize);
+        // pos[3*i+1] -= boxSize * std::floor(pos[3*i+1] / boxSize);
+        // pos[3*i+2] -= boxSize * std::floor(pos[3*i+2] / boxSize);
 
         // (t + delT/2)
         vel[3*i + 0] = vel[3*i + 0] + 0.5 * acc[3*i + 0] * timeStep;
@@ -131,9 +131,9 @@ void Solver::calculateEnergy() {
             double y = pos[3*index + 1] - pos[3*i + 1]; 
             double z = pos[3*index + 2] - pos[3*i + 2];
 
-            x -= boxSize * std::round(x / boxSize);
-            y -= boxSize * std::round(y / boxSize);
-            z -= boxSize * std::round(z / boxSize);
+            z -= boxSize * std::floor(z / boxSize);
+            x -= boxSize * std::floor(x / boxSize);
+            y -= boxSize * std::floor(y / boxSize);
 
             double dist2 = x*x + y*y + z*z; //xij^2
             // if (dist2 > cutoff * cutoff) continue;

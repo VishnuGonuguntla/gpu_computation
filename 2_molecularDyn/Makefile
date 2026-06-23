@@ -5,7 +5,7 @@ CC = g++
 NVCC = nvcc
 
 C_FLAGS = -O3 -march=native -std=c++17
-CUDA_FLAGS = -g -lcurand -arch=sm_80 -O3 -std=c++17
+CUDA_FLAGS = -g -lcurand -arch=sm_80 -O0 -std=c++17
 PARAMETERS = molDyn.par 1
 
 targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-cuda
