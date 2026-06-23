@@ -40,7 +40,20 @@
 # debug information files
 *.dwo
 
-3_molecularDynOpt/build
+.clangd
+
+# output files
 3_molecularDynOpt/data
 2_molecularDyn/data
+2_molecularDyn/.vtk
 3_molecularDynOpt/*.vtk
+4_DEM/*.vtk
+4_DEM/data
+2_molecularDyn/run.sh
+3_molecularDynOpt/run.sh
+4_DEM/run.sh
+
+.vscode
+2_molecularDyn/build
+3_molecularDynOpt/build
+4_DEM/build
