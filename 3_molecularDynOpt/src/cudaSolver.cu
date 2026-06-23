@@ -1,7 +1,6 @@
 #include "kernels.cuh" // cuda Kernels
-#include <cub/cub.cuh>
 
-#include "cudaSolver.hpp" // Host Function Declaration
+#include "cudaSolver.cuh" // Host Function Declaration
 
 void Solver::cudaInitSolver() {
     int nParticles = params["nParticles"];

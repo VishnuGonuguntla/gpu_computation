@@ -2,11 +2,12 @@
 
 #include <vector>
 #include <string>
-#include <cuda.h>
 #include <random>
 #include <map>
 #include <iostream>
 #include <fstream>
+
+#include <cuda.h>
 #include <curand.h>
 
 #include "cuda-util.cuh"
