@@ -1,0 +1,25 @@
+# Track Parameters
+track_width 12.0
+track_radius 50.0
+num_waypoints 36
+
+
+# Obstacle
+xPosition 55.0
+yPosition 0.0
+radius 2.0
+
+# Physical Parameters
+Mass            1500.0  # Mass Kg
+Inertia         2500.0  # I_z (Yaw Inertia kg-m^2)
+frontAxleDist   1.2     # a (Distance to front axle m)
+rearAxleDist    1.5     # b (Distance to rear axle m)
+stiffnessFront  50000.0 # C_f (Front stiffness N/rad)
+rearStiffness   50000.0 # C_r (Rear stiffness N/rad)
+mu              0.8     #  (Asphalt friction coefficient)
+
+# MPPI Parameters
+dt              0.02
+ghostCars       100000
+predictiveSteps 40
+
