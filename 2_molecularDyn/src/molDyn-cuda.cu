@@ -1,5 +1,8 @@
 #include <iostream>
 #include <chrono>
+#include <iomanip>
+#include <sstream>
+
 #include "Helper.cpp"
 
 #include <cuda.h>
@@ -14,7 +17,7 @@ int main(int argc, char* argv[]) {
     }
     std::map <std::string, double> parameters;
     parseParameter(argv[1], parameters);
-    // if (argc > 2) parameters["nParticles"] = std::stod(argv[3]);
+    if (argc > 3) parameters["nParticles"] = std::stod(argv[3]);
     bool genVTK = std::stoi(argv[2]);
 #ifdef DEBUG
     std::cout << "Parameters loaded successfully." << std::endl;
@@ -64,9 +67,11 @@ int main(int argc, char* argv[]) {
         if (iter % 100 == 0 && genVTK) {
             solver.copyToHost();
             KERNEL_SYNC_CHECK();
-            // std::cout << solver.acc.size() << std::endl;
-            std::string filename = "data/parallel_" + std::to_string(iter) + ".vtk";
-            solver.writeVTK(filename,iter);
+            std::ostringstream ss;
+            ss << "data/parallel_"
+            << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
+            << ".vtk";
+            solver.writeVTK(ss.str());
         }
         // std::cout << "Done" << std::endl;
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <iomanip>
 
 #include "Helper.cpp"
 #include "Solver.hpp"
@@ -10,8 +11,10 @@ int main(int argc, char* argv[]) {
                   << argv[1] << "writeVtk 0 for 'no' and 1 for 'yes'" << std::endl;
         return 1;
     }
+    std::cout << argc << std::endl;
     std::map <std::string, double> parameters;
     parseParameter(argv[1], parameters);
+    if (argc > 3) parameters["nParticles"] = std::stod(argv[3]);
     bool genVTK = std::stoi(argv[2]);
 
 #ifdef DEBUG
@@ -44,8 +47,13 @@ int main(int argc, char* argv[]) {
         //     solver.calculateEnergy();
         // }
         if (iter % writeVtk == 0 && genVTK) {
-            std::string filename = "data/outputSerial_" + std::to_string(iter) + ".vtk";
-            solver.writeVTK(filename);
+            std::ostringstream ss;
+            ss << "data/serial_"
+            << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
+            << ".vtk";
+    
+            // std::string filename = "data/outputSerial_" + std::to_string(iter) + ".vtk";
+            solver.writeVTK(ss.str());
         }
     }
     auto end = std::chrono::steady_clock::now();

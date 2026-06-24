@@ -102,7 +102,7 @@ cudaMemcpy(testVel, d_vel, 3*sizeof(double), cudaMemcpyDeviceToHost);
     std::cout << hostKEnergy << " " << hostPEnergy << " " << hostEnergy << std::endl;
 }
 
-void Solver::writeVTK(std::string filename, int iter) {
+void Solver::writeVTK(std::string filename) {
 
     int n = params["nParticles"];
     std::ofstream f;
