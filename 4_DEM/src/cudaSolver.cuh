@@ -2,13 +2,11 @@
 
 #include <vector>
 #include <string>
-#include <cuda.h>
-#include <random>
-#include <map>
-#include <iostream>
 #include <fstream>
-#include <curand.h>
+#include <map>
 
+#include <cuda.h>
+#include <curand.h>
 #include "cuda-util.cuh"
 
 class Solver {
@@ -33,9 +31,6 @@ public:
         this->numCells = numCellsPerDim * numCellsPerDim * numCellsPerDim;
         this->cell.resize(this->numCells, -1);
         this->cellIndex.resize(n, -1);
-        std::cout << "cutoff " << cutoff << std::endl;
-        std::cout << "No. of Cells " << numCells << std::endl;
-        std::cout << "numCellsPerDimension: " << numCellsPerDim << std::endl;
     }
     // device pointers — stored on host, point to GPU memory
     double* d_pos  = nullptr;
@@ -135,7 +130,7 @@ public:
 
     // host method that LAUNCHES the kernel
     void cudaInitSolver();
-    void cudaComputeForceLJ();
+    void cudaComputeForce();
     void cudaFirstIntegratePBC();
     void cudaFinalIntegratePBC();
     void cudaCalculateEnergy();

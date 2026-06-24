@@ -1,10 +1,12 @@
 #include <iostream>
 #include <chrono>
+#include <iomanip>
+#include <sstream>
 
 #include <cuda.h>
 
 #include "Helper.cpp"
-#include "cudaSolver.hpp"
+#include "cudaSolver.cuh"
 #include "cuda-util.cuh"
 
 int main(int argc, char* argv[]) {
@@ -28,14 +30,14 @@ int main(int argc, char* argv[]) {
     double timeStep = parameters["timeStep"];
     double nTimeSteps = parameters.at("nTime") / timeStep;
     int calculateEnergy = (int)parameters["calculateEnergy"];
-
+    int writeVTK = (int)parameters["writeVTK"];
     solver.allocateDevice();
     KERNEL_SYNC_CHECK();
     solver.cudaInitSolver();
     KERNEL_SYNC_CHECK();
     solver.cudaBuildCellList();
     KERNEL_SYNC_CHECK();
-    solver.cudaComputeForceLJ();
+    solver.cudaComputeForce();
     KERNEL_SYNC_CHECK();
     double totalComputeTime = 0.0;
     auto start = std::chrono::steady_clock::now();
@@ -47,7 +49,7 @@ int main(int argc, char* argv[]) {
         solver.cudaBuildCellList();
         KERNEL_SYNC_CHECK();
         auto startCompute = std::chrono::steady_clock::now();
-        solver.cudaComputeForceLJ(); // O(N^2)
+        solver.cudaComputeForce(); // O(N^2)
         KERNEL_SYNC_CHECK();
         auto endCompute = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsedSeconds = endCompute - startCompute;
@@ -56,14 +58,16 @@ int main(int argc, char* argv[]) {
         solver.cudaFinalIntegratePBC(); // O(N)
         KERNEL_SYNC_CHECK();
 
-        if (iter % 100 == 0) {
+        if (iter % writeVTK == 0) {
             solver.copyToHost();
             KERNEL_SYNC_CHECK();
-            // std::cout << solver.acc.size() << std::endl;
-            std::string filename = "outParallel_" + std::to_string(iter) + ".vtk";
-            // std::cout << "start2" << std::endl;
-            solver.writeVTK(filename);
-            // std::cout << "start2" << std::endl;
+            std::ostringstream ss;
+            ss << "data/parallel_"
+            << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
+            << ".vtk";
+            solver.writeVTK(ss.str());
+            KERNEL_SYNC_CHECK();
+
         }
     }
     std::cout << "Average Compute Time: " << totalComputeTime / nTimeSteps << " seconds" << std::endl;

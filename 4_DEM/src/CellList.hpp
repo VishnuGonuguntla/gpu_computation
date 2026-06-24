@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -18,7 +19,7 @@ public:
     int numCellsPerDim;
 
     CellList() = default;
-    CellList(std::map<std::string, double> parameters);
+    CellList(std::map<std::string, double> params);
 
     void build(std::vector<double>& pos);
 

@@ -1,5 +1,7 @@
 #include <iostream>
 #include <chrono>
+#include <iomanip>
+#include <sstream>
 
 #include "Helper.cpp"
 #include "Solver.hpp"
@@ -18,7 +20,6 @@ int main(int argc, char* argv[]) {
         std::cout << i.first << ": " << i.second << std::endl;
     }    
 #endif
-
     Solver solver(parameters);
     solver.initSolver();
     // solver.writeVTK("initial.vtk");
@@ -31,33 +32,32 @@ int main(int argc, char* argv[]) {
 
     auto start = std::chrono::steady_clock::now();
     solver.cellList.build(solver.pos);
-    solver.computeForceLJ(); // compute initial forces at t=0
+    solver.frictionalForce(); // compute initial forces at t=0
 
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
         solver.firstIntegratePBC(); // O(N)
 
         solver.cellList.build(solver.pos);        
 
-        solver.computeForceLJ(); // O(N^2)
+        solver.frictionalForce(); // O(N^2)
 
         solver.finalIntegratePBC(); // O(N)
         // if (iter % calculateEnergy == 0) {
         //     std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
         //     solver.calculateEnergy();
         // }
-        // generate vtk every 100 timeSteps
         if (iter % 100 == 0) {
             // std::cout << "TimeStep: " << iter*timeStep << " ;Energy: " << std::endl; 
-            std::string outFile = "outSerial_" + std::to_string(iter) + ".vtk";
+            std::ostringstream ss;
+            ss << "data/serial_"
+            << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
+            << ".vtk";
             auto startWrite = std::chrono::steady_clock::now();
-            solver.writeVTK(outFile);
+            solver.writeVTK(ss.str());
             auto endWrite = std::chrono::steady_clock::now();
             std::chrono::duration<double> elapsedSeconds = endWrite - startWrite;
-            std::cout << "Time: " << elapsedSeconds.count() << std::endl;
+            // std::cout << "Time: " << elapsedSeconds.count() << std::endl;
         }
-        // std::string outFile = "out_" + std::to_string(iter) + ".vtk";
-        // solver.writeVTK(outFile);
-
     }
     auto end = std::chrono::steady_clock::now();
     printStats(end-start, nParticles, (int)nTimeSteps);
