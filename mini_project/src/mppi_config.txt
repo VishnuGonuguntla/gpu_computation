@@ -1,0 +1,3 @@
+samples 1000
+steps 100
+dt 0.02
