@@ -8,7 +8,7 @@ MPPI::MPPI(int samples, int steps, float delta_t){
     
     // Hyperparameters
     lambda = 1.0f; 
-    noise_std_steer = 0.4f;    // 0.4 radians of random steering
+    noise_std_steer = 0.5f;    // 0.4 radians of random steering
     noise_std_throttle = 1000.0f; // 500 Newtons of random throttle
 
     // Iintialize with zeroes
@@ -28,7 +28,7 @@ ControlInput MPPI::get_best_control(CarState current_state, Car& car_model, Trac
     // 2d spread sheet 
     std::vector<std::vector<ControlInput>> random_noises(num_samples, std::vector<ControlInput>(horizon));
 
-    float target_speed = 10.0f; // example car to drive at 10 m/s - can be taken from the input of the user 
+    float target_speed = 15.0f; // example car to drive at 10 m/s - can be taken from the input of the user 
 
     // ghost cars
     for (int k = 0; k < num_samples; ++k) {
@@ -55,18 +55,21 @@ ControlInput MPPI::get_best_control(CarState current_state, Car& car_model, Trac
             ghost_cost += track.get_position_cost(ghost_state.x, ghost_state.y);
 
             // adding penalty if it is driving too slow
-            ghost_cost += 100000.0f * std::pow((target_speed - ghost_state.vx), 2);
+            ghost_cost += 10000.0f * std::pow((target_speed - ghost_state.vx), 2);
 
             // change or add vy into this penalyty  and reqrd for maintian gthe speed 
 
             // The Actuation Penalty (Smoothness)	
-            ghost_cost += 100.0f * (u_steer * u_steer);
+            ghost_cost += 10.0f * (u_steer * u_steer);
 
             // for flooring the gas pedal unnecessarily
             ghost_cost += 0.01f * (u_throttle * u_throttle);
         }
-        
+        // rewarding for moving forward 
+        float distance_traveled = std::hypot(ghost_state.x - current_state.x, ghost_state.y - current_state.y);
+        ghost_cost -= 10.0f * distance_traveled;
         trajectory_costs[k] = ghost_cost;
+
     }
 	
     // finding the minimum cost among the ghost cars - algo 2
@@ -97,8 +100,8 @@ ControlInput MPPI::get_best_control(CarState current_state, Car& car_model, Trac
         nominal_trajectory[t].throttle += (weighted_throttle_noise / total_weight);
 
         //clamping here 
-        if (nominal_trajectory[t].steering > 0.8f) nominal_trajectory[t].steering = 0.8f;
-        if (nominal_trajectory[t].steering < -0.8f) nominal_trajectory[t].steering = -0.8f;
+        //if (nominal_trajectory[t].steering > 0.8f) nominal_trajectory[t].steering = 0.8f;
+        //if (nominal_trajectory[t].steering < -0.8f) nominal_trajectory[t].steering = -0.8f;
 
         //if (nominal_trajectory[t].throttle > 1000.0f) nominal_trajectory[t].throttle = 1000.0f;
         //if (nominal_trajectory[t].throttle < -1000.0f) nominal_trajectory[t].throttle = -1000.0f;
@@ -116,4 +119,17 @@ ControlInput MPPI::get_best_control(CarState current_state, Car& car_model, Trac
     nominal_trajectory[horizon - 1] = {0.0f, 0.0f};
 
     return best_action_now;
+}
+
+// for drawing the tentacle
+std::vector<std::pair<float, float>> MPPI::get_predicted_path(CarState current_state, Car& car_model) {
+    std::vector<std::pair<float, float>> path;
+    CarState sim_state = current_state;
+    
+    for (int t = 0; t < horizon; ++t) {
+        sim_state = car_model.step_dynamics(sim_state, nominal_trajectory[t].steering, nominal_trajectory[t].throttle, dt);
+        path.push_back({sim_state.x, sim_state.y});
+    }
+    
+    return path;
 }

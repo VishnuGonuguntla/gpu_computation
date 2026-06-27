@@ -88,7 +88,7 @@ void IOManager::start_telemetry(const std::string& filename) {
     }
 }
 
-void IOManager::log_step(float time, float x, float y, float psi, float vx, float steer, float throttle) {
+void IOManager::log_step(float time, float x, float y, float psi, float vx, float steer, float throttle, const std::vector<std::pair<float, float>>& predicted_path) {
     if (telemetry_file.is_open()) {
         telemetry_file << std::fixed << std::setprecision(4)
                        << time << " "
@@ -97,7 +97,12 @@ void IOManager::log_step(float time, float x, float y, float psi, float vx, floa
                        << psi << " "
                        << vx << " "
                        << steer << " "
-                       << throttle << "\n";
+                       << throttle;
+
+        for (const auto& pt : predicted_path) {
+            telemetry_file << " " << pt.first << " " << pt.second;   
+        }
+        telemetry_file << "\n";           
     }
 }
 

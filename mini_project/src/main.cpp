@@ -28,7 +28,7 @@ int main(){
     CarState current_state = {50.0f, 0.0f, 1.570796f, 10.0f, 0.0f, 0.0f};
 
     // Setup the Simulation Timeline
-    float total_time = 100.0f;  
+    float total_time = 60.0f;  
     int total_steps = total_time / mppiparams.dt;
 
     std::cout << "Starting race loop (" << total_steps << " steps)..." << std::endl;
@@ -41,6 +41,8 @@ int main(){
         // Step A: predicts the future and chooses the best inputs
         ControlInput optimal = mppi_brain.get_best_control(current_state, my_car, race_track);
 
+        auto predicted_path = mppi_brain.get_predicted_path(current_state, my_car);
+
         // Step B: car executes those inputs and moves forward
         current_state = my_car.step_dynamics(current_state, optimal.steering, optimal.throttle, mppiparams.dt);
 
@@ -52,7 +54,8 @@ int main(){
             current_state.psi, 
             current_state.vx, 
             optimal.steering, 
-            optimal.throttle
+            optimal.throttle,
+            predicted_path
         );
 
         // Optional: Print a heartbeat to the terminal so you know it hasn't frozen

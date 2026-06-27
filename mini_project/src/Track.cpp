@@ -55,7 +55,7 @@ float Track::get_position_cost(float car_x, float car_y) {
         if (loop_dist < min_dist) min_dist = loop_dist;
 
         // If the car is further from the center than half the track width, it crashed!
-        if (min_dist > (track_width / 2.0f)) {
+        if (min_dist > (track_width / 2.0f)+0.25) {
             total_cost += 100000000.0f; // Massive penalty for driving off-track
         }
     }
@@ -65,10 +65,12 @@ float Track::get_position_cost(float car_x, float car_y) {
         float dist_to_obs = std::hypot(car_x - obs.x, car_y - obs.y);
         
         // If the car enters the obstacle's radius, it crashed!
-        if (dist_to_obs <= obs.radius) {
+        if (dist_to_obs <= (obs.radius)+0.25) {
             total_cost += 100000000.0f; // Massive penalty for hitting an obstacle
         }
     }
 
     return total_cost;
 }
+
+

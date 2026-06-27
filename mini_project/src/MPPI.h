@@ -43,4 +43,5 @@ public:
 
     // THE BRAIN: Takes the current state, simulates the ghosts, and returns the best action
     ControlInput get_best_control(CarState current_state, Car& car_model, Track& track);
+    std::vector<std::pair<float, float>> get_predicted_path(CarState current_state, Car& car_model);
 };

@@ -7,7 +7,7 @@ import sys
 import os
 
 def load_track_data(filename="track_data.txt"):
-    
+    """Reads the exact same track file that the C++ engine uses."""
     width = 12.0
     wx, wy = [], []
     obs = []
@@ -43,8 +43,9 @@ def main():
     track_width, track_x, track_y, obstacles = load_track_data()
     
     times, xs, ys, psis, vxs, steers, throttles = [], [], [], [], [], [], []
+    whips = []
 
-    # Read the telemetry file (Expecting 7 columns!)
+    # Read the telemetry file (Expecting 7 columns)
     try:
         with open("telemetry.txt", "r") as f:
             for line in f:
@@ -56,13 +57,16 @@ def main():
                     times.append(float(parts[0]))
                     xs.append(float(parts[1]))
                     ys.append(float(parts[2]))
-                    psis.append(float(parts[3]))      # Heading angle
-                    vxs.append(float(parts[4]))       # Forward speed
-                    steers.append(float(parts[5]))    # Steering command
-                    throttles.append(float(parts[6])) # Throttle command
+                    psis.append(float(parts[3]))      
+                    vxs.append(float(parts[4]))       
+                    steers.append(float(parts[5]))    
+                    throttles.append(float(parts[6])) 
+                    # NEW: Read the remaining pairs of X, Y coordinates
+                    whip_x = [float(parts[i]) for i in range(7, len(parts), 2)]
+                    whip_y = [float(parts[i+1]) for i in range(7, len(parts), 2)]
+                    whips.append((whip_x, whip_y))
     except FileNotFoundError:
         print("Error: 'telemetry.txt' not found!")
-        print("Make sure your C++ code exports: time x y psi vx steer throttle")
         sys.exit(1)
 
     if not times:
@@ -73,9 +77,39 @@ def main():
     fig, ax = plt.subplots(figsize=(10, 10))
     plt.style.use('dark_background')
     
-    # 1. Draw the Track Centerline
+    # ==========================================
+    # 1. DRAW THE TRACK AND BOUNDARIES
+    # ==========================================
     if track_x:
-        ax.plot(track_x, track_y, color='gray', linestyle='--', linewidth=2, label='Centerline')
+        # Draw the Centerline (thin, dashed)
+        ax.plot(track_x, track_y, color='gray', linestyle='--', linewidth=1, label='Centerline')
+        
+        # Convert to numpy arrays for fast vector math
+        tx = np.array(track_x)
+        ty = np.array(track_y)
+        
+        # Calculate the tangent slope (derivative) at every point
+        dx = np.gradient(tx)
+        dy = np.gradient(ty)
+        
+        # Normalize the vectors (make their length exactly 1)
+        lengths = np.hypot(dx, dy)
+        lengths[lengths == 0] = 1.0 # Prevent division by zero
+        
+        # Calculate the Normal vectors (rotate 90 degrees)
+        nx = -dy / lengths
+        ny = dx / lengths
+        
+        # Push out by half the track width
+        half_width = track_width / 2.0
+        inner_x = tx + nx * half_width
+        inner_y = ty + ny * half_width
+        outer_x = tx - nx * half_width
+        outer_y = ty - ny * half_width
+        
+        # Draw the solid inner and outer boundaries
+        ax.plot(inner_x, inner_y, color='black', linewidth=2, label='Inner Edge')
+        ax.plot(outer_x, outer_y, color='black', linewidth=2, label='Outer Edge')
         
     # 2. Draw the Obstacles
     for ox, oy, orad in obstacles:
@@ -83,21 +117,19 @@ def main():
         ax.add_patch(obs_circle)
 
     # --- Setup Animation Elements ---
-    # The Car (Cyan rectangle)
     car_length = 3.0
     car_width = 1.5
     car_patch = patches.Rectangle((0, 0), car_length, car_width, color='cyan', zorder=10)
     ax.add_patch(car_patch)
 
-    # The Trail (Path left behind)
     trail_line, = ax.plot([], [], color='cyan', alpha=0.5, linewidth=2)
 
-    # Live Dashboard Text
+    whip_line, = ax.plot([], [], color='magenta', alpha=0.8, linewidth=2, linestyle='-')
+
     dashboard_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='yellow', 
                              fontsize=12, fontfamily='monospace', verticalalignment='top',
                              bbox=dict(facecolor='black', alpha=0.7, edgecolor='white'))
 
-    # Setup camera limits (dynamically size the window to the track)
     if track_x:
         ax.set_xlim(min(track_x) - 20, max(track_x) + 20)
         ax.set_ylim(min(track_y) - 20, max(track_y) + 20)
@@ -110,27 +142,24 @@ def main():
 
     # --- Animation Update Function ---
     def update(frame):
-        # 1. Update the Trail
         trail_line.set_data(xs[:frame+1], ys[:frame+1])
 
-        # 2. Update the Car's Position and Rotation
+        if frame < len(whips) and whips[frame][0]:
+            whip_line.set_data(whips[frame][0], whips[frame][1])
+
         curr_x, curr_y, curr_psi = xs[frame], ys[frame], psis[frame]
-        
-        # Center the rectangle on the X,Y coordinate, then rotate it based on Psi
         car_patch.set_xy((-car_length/2, -car_width/2)) 
         transform = transforms.Affine2D().rotate(curr_psi).translate(curr_x, curr_y) + ax.transData
         car_patch.set_transform(transform)
 
-        # 3. Update the Dashboard
         dash_str = (f"Time:     {times[frame]:.2f} s\n"
                     f"Speed:    {vxs[frame]:.1f} m/s\n"
                     f"Steer:    {steers[frame]:.3f} rad\n"
                     f"Throttle: {throttles[frame]:.0f} N")
         dashboard_text.set_text(dash_str)
 
-        return car_patch, trail_line, dashboard_text
+        return car_patch, trail_line, whip_line, dashboard_text
 
-    # Calculate interval to play back in roughly real-time
     dt_ms = (times[1] - times[0]) * 1000 if len(times) > 1 else 20.0
     
     print("Starting Animation...")

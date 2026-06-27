@@ -26,7 +26,8 @@ public:
     Trackdata load_track_data(const std::string &file_name);
 
     void start_telemetry(const std::string& filename);
-    void log_step(float time, float x, float y, float psi, float vx, float steer, float throttle);
+    //void log_step(float time, float x, float y, float psi, float vx, float steer, float throttle);
+    void log_step(float time, float x, float y, float psi, float vx, float steer, float throttle, const std::vector<std::pair<float, float>>& predicted_path);
     void close_telemetry();
 
 };
