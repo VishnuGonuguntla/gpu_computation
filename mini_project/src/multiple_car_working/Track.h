@@ -33,8 +33,6 @@ public:
     //void add_waypoint(float x, float y);
     void add_waypoints(const std::vector<Point2D> &waypoints);
     void add_obstacles(const std::vector<Obstacle> &obstacles);
-    const std::vector<Point2D>& get_center_line() const;
-    float get_track_width() const;
 
     // Returns the penalty cost for a given X/Y position
     float get_position_cost(float car_x, float car_y);

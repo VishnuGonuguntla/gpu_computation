@@ -80,11 +80,4 @@ float Track::get_position_cost(float car_x, float car_y) {
     return total_cost;
 }
 
-const std::vector<Point2D>& Track::get_center_line() const {
-    return center_line;
-}
 
-
-float Track::get_track_width() const {
-    return track_width;
-}
