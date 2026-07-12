@@ -15,14 +15,13 @@ int main() {
     std::vector<Car> fleet;
     std::vector<CarState> fleet_states;
     
-    std::vector<std::unique_ptr<CudaMPPI>> fleet_brains;
 
     for (const auto &setup : fleet_setup) {
         fleet.push_back(Car(setup.params));
         fleet_states.push_back(setup.initial_state);
-
-        fleet_brains.push_back(std::make_unique<CudaMPPI>(mppiparams, setup, trackdata, simparams.num_cars));
     }
+
+    CudaMPPI central_brain(mppiparams, fleet_setup[0], trackdata, simparams.num_cars);
 
     // Open the telemetry file
     std::ofstream telemetry_file = io.init_telemetry("telemetry.txt");
@@ -33,22 +32,22 @@ int main() {
 
     // Main loop
     for (int i = 0; i <= total_steps; ++i) {
-        float current_time = i * mppiparams.dt;
+        double current_time = i * mppiparams.dt;
 
         // predicted paths for collision cehcking 
-        std::vector<std::vector<std::pair<float, float>>> fleet_paths(simparams.num_cars);
+        std::vector<std::vector<std::pair<double, double>>> fleet_paths(simparams.num_cars);
         for (int c = 0; c < simparams.num_cars; ++c) {
-            fleet_paths[c] = fleet_brains[c]->get_predicted_path(fleet_states[c], fleet[c]);
+            fleet_paths[c] = central_brain.get_predicted_path(fleet_states[c], fleet[c], c);            
         }
 
         for(int c = 0; c < simparams.num_cars; ++c) {
 
             // Predicting the future and choose the best inputs on GPU
 
-            ControlInput optimal = fleet_brains[c]->get_best_control(fleet_states[c], fleet_paths, c);
+            ControlInput optimal = central_brain.get_best_control(fleet_states[c], fleet_paths, c);
             
             //updated trajectory for logging
-            auto predicted_path = fleet_brains[c]->get_predicted_path(fleet_states[c], fleet[c]);
+            auto predicted_path = central_brain.get_predicted_path(fleet_states[c], fleet[c], c);
 
             // exectuing the best control 
             fleet_states[c] = fleet[c].step_dynamics(fleet_states[c], optimal.steering, optimal.throttle, mppiparams.dt);

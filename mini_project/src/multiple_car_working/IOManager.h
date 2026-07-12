@@ -9,21 +9,21 @@
 #include "MPPI.h"
 
 struct Trackdata{
-    float track_width;
+    double track_width;
     std::vector<Point2D> waypoints;
     std::vector<Obstacle> obstacles;
 };
 
 struct SimParams{
     //with default values
-    float total_time = 50.0f;
+    double total_time = 50.0;
     int num_cars = 1;
 };
 
 struct CarSetup{
     CarParams params;
     CarState initial_state;
-    float target_speed;
+    double target_speed;
 };
 
 
@@ -37,8 +37,8 @@ public:
 
     // logging
     std::ofstream init_telemetry(const std::string& filename);
-    //void log_step(float time, float x, float y, float psi, float vx, float steer, float throttle, const std::vector<std::pair<float, float>>& predicted_path);
-    void log_step(std::ofstream& file, float time, int car_id, const CarState& state, float steer, float throttle, const std::vector<std::pair<float, float>>& predicted_path);
+    //void log_step(double time, double x, double y, double psi, double vx, double steer, double throttle, const std::vector<std::pair<double, double>>& predicted_path);
+    void log_step(std::ofstream& file, double time, int car_id, const CarState& state, double steer, double throttle, const std::vector<std::pair<double, double>>& predicted_path);
 
 };
 

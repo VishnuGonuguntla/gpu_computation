@@ -6,7 +6,11 @@ targets = $(BUILD_DIR)/mppi
 
 # compiler and flags
 NVCC = nvcc
-NVCCFLAGS = -O3 -std=c++14
+# Added -g -G for debugging, removed -O3 because optimization 
+# interferes with accurate line-by-line stepping
+NVCCFLAGS = -std=c++14 -g -G
+#NVCCFLAGS = -O3 -std=c++14 
+LDFLAGS = -lcurand
 
 .PHONY: all
 all: mk-target-dir $(targets)
@@ -14,9 +18,9 @@ all: mk-target-dir $(targets)
 mk-target-dir:
 	mkdir -p $(BUILD_DIR)
 
-
+# build rules
 $(BUILD_DIR)/mppi: main.cpp Car.cpp CudaMPPI.cu IOManager.cpp Car.h CudaMPPI.cuh IOManager.h
-	$(NVCC) $(NVCCFLAGS) -arch=sm_60 -o $(BUILD_DIR)/mppi main.cpp Car.cpp CudaMPPI.cu IOManager.cpp
+	$(NVCC) $(NVCCFLAGS) -arch=sm_60 -o $(BUILD_DIR)/mppi main.cpp Car.cpp CudaMPPI.cu IOManager.cpp $(LDFLAGS)
 
 # aliases without build directory
 .PHONY: mppi 

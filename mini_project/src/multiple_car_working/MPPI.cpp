@@ -12,18 +12,18 @@ MPPI::MPPI(const MPPIParms &params){
     noise_std_throttle = params.std_throttle; // 1000 Newtons of random throttle
 
     // Iintialize with zeroes
-    nominal_trajectory.resize(horizon, {0.0f, 0.0f});
+    nominal_trajectory.resize(horizon, {0.0, 0.0});
 
     // Setup the random number generator
     std::random_device rd;
     rng = std::mt19937(rd());
-    steer_dist = std::normal_distribution<float>(0.0f, noise_std_steer);
-    throttle_dist = std::normal_distribution<float>(0.0f, noise_std_throttle);
+    steer_dist = std::normal_distribution<double>(0.0, noise_std_steer);
+    throttle_dist = std::normal_distribution<double>(0.0, noise_std_throttle);
 }
 
-ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_model, Track& track, const std::vector<std::vector<std::pair<float, float>>>& other_paths, int mycar_id) {
+ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_model, Track& track, const std::vector<std::vector<std::pair<double, double>>>& other_paths, int mycar_id) {
     
-    std::vector<float> trajectory_costs(num_samples, 0.0f);
+    std::vector<double> trajectory_costs(num_samples, 0.0);
     
     // 2d spread sheet 
     std::vector<std::vector<ControlInput>> random_noises(num_samples, std::vector<ControlInput>(horizon));
@@ -33,19 +33,19 @@ ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_mode
     for (int k = 0; k < num_samples; ++k) {
         
         CarState ghost_state = current_state; // Clone the actual car
-        float ghost_cost = 0.0f;
+        double ghost_cost = 0.0;
 	
         for (int t = 0; t < horizon; ++t) {
             // Generate random noise for this specific step
-            float n_steer = steer_dist(rng);
-            float n_throttle = throttle_dist(rng);
+            double n_steer = steer_dist(rng);
+            double n_throttle = throttle_dist(rng);
             
             // we can use it in the math later
             random_noises[k][t] = {n_steer, n_throttle};
 
             // Apply the nominal plan + the random noise
-            float u_steer = nominal_trajectory[t].steering + n_steer;
-            float u_throttle = nominal_trajectory[t].throttle + n_throttle;
+            double u_steer = nominal_trajectory[t].steering + n_steer;
+            double u_throttle = nominal_trajectory[t].throttle + n_throttle;
 
             // calulating the dynamics!
             ghost_state = car_model.step_dynamics(ghost_state, u_steer, u_throttle, dt);
@@ -54,15 +54,15 @@ ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_mode
             for (int other_id = 0; other_id < other_paths.size(); ++other_id) {
                 if (other_id == mycar_id) continue; 
 
-                float other_x = other_paths[other_id][t].first;
-                float other_y = other_paths[other_id][t].second;
+                double other_x = other_paths[other_id][t].first;
+                double other_y = other_paths[other_id][t].second;
                 
                 // Calculate Euclidean distance between our ghost and the other car's future plan
-                float dist = std::hypot(ghost_state.x - other_x, ghost_state.y - other_y);
+                double dist = std::hypot(ghost_state.x - other_x, ghost_state.y - other_y);
                 
                 // The Safety Bubble
-                if (dist < 2.5f) {
-                    ghost_cost += 1000000.0f; 
+                if (dist < 2.5) {
+                    ghost_cost += 1000000.0; 
                 }  
             }
 
@@ -70,19 +70,19 @@ ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_mode
             ghost_cost += track.get_position_cost(ghost_state.x, ghost_state.y);
 
             // adding penalty if it is driving too slow
-            ghost_cost += 10000.0f * std::pow((target_speed - ghost_state.vx), 2);
+            ghost_cost += 10000.0 * std::pow((target_speed - ghost_state.vx), 2);
 
             // change or add vy into this penalyty  and reqrd for maintian gthe speed 
 
             // The Actuation Penalty (Smoothness)	
-            ghost_cost += 10.0f * (u_steer * u_steer);
+            ghost_cost += 10.0 * (u_steer * u_steer);
 
             // for flooring the gas pedal unnecessarily
-            ghost_cost += 0.01f * (u_throttle * u_throttle);
+            ghost_cost += 0.01 * (u_throttle * u_throttle);
         }
         // rewarding for moving forward 
-        float distance_traveled = std::hypot(ghost_state.x - current_state.x, ghost_state.y - current_state.y);
-        ghost_cost -= 500.0f * distance_traveled;
+        double distance_traveled = std::hypot(ghost_state.x - current_state.x, ghost_state.y - current_state.y);
+        ghost_cost -= 500.0 * distance_traveled;
         trajectory_costs[k] = ghost_cost;
 
     }
@@ -90,10 +90,10 @@ ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_mode
     // finding the minimum cost among the ghost cars - algo 2
 
     // extracting the min cost - in a fancy way!!!!
-    float min_cost = *std::min_element(trajectory_costs.begin(), trajectory_costs.end());	
+    double min_cost = *std::min_element(trajectory_costs.begin(), trajectory_costs.end());	
     	
-    float total_weight = 0.0f;
-    std::vector<float> weights(num_samples, 0.0f);	
+    double total_weight = 0.0;
+    std::vector<double> weights(num_samples, 0.0);	
 
     for (int k = 0; k < num_samples; ++k) {
         // Equation: weight = exp( -(cost - min_cost) / lambda )
@@ -103,8 +103,8 @@ ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_mode
 	
     // Update the nominal trajectory using the weighted average of the noise
     for (int t = 0; t < horizon; ++t) {
-        float weighted_steer_noise = 0.0f;
-        float weighted_throttle_noise = 0.0f;
+        double weighted_steer_noise = 0.0;
+        double weighted_throttle_noise = 0.0;
 
         for (int k = 0; k < num_samples; ++k) {
             weighted_steer_noise += weights[k] * random_noises[k][t].steering;
@@ -123,14 +123,14 @@ ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_mode
         nominal_trajectory[t] = nominal_trajectory[t + 1];
     }
     // last step to zero so we don't carry garbage data
-    nominal_trajectory[horizon - 1] = {0.0f, 0.0f};
+    nominal_trajectory[horizon - 1] = {0.0, 0.0};
 
     return best_action_now;
 }
 
 // for drawing the tentacle
-std::vector<std::pair<float, float>> MPPI::get_predicted_path(const CarState& current_state, Car& car_model) {
-    std::vector<std::pair<float, float>> path;
+std::vector<std::pair<double, double>> MPPI::get_predicted_path(const CarState& current_state, Car& car_model) {
+    std::vector<std::pair<double, double>> path;
     CarState sim_state = current_state;
     
     for (int t = 0; t < horizon; ++t) {
@@ -141,6 +141,6 @@ std::vector<std::pair<float, float>> MPPI::get_predicted_path(const CarState& cu
     return path;
 }
 
-void MPPI::set_target_speed(const float speed){
+void MPPI::set_target_speed(const double speed){
     target_speed = speed;
 }

@@ -3,6 +3,7 @@ import matplotlib.animation as animation
 import matplotlib.transforms as transforms
 import matplotlib.patches as patches
 import numpy as np
+from shapely.geometry import LineString
 import sys
 import os
 
@@ -99,11 +100,24 @@ def main():
         lengths = np.hypot(dx, dy)
         lengths[lengths == 0] = 1.0 
         
-        nx, ny = -dy / lengths, dx / lengths
-        half_width = track_width / 2.0
+        #nx, ny = -dy / lengths, dx / lengths
+        #nx[-1] = nx[0]
+        #ny[-1] = ny[0]
+        #half_width = track_width / 2.0
         
-        ax.plot(tx + nx * half_width, ty + ny * half_width, color='black', linewidth=2)
-        ax.plot(tx - nx * half_width, ty - ny * half_width, color='black', linewidth=2)
+        #ax.plot(tx + nx * half_width, ty + ny * half_width, color='black', linewidth=2)
+        #ax.plot(tx - nx * half_width, ty - ny * half_width, color='black', linewidth=2)
+        line = LineString(list(zip(track_x, track_y)))
+        track_poly = line.buffer(track_width / 2.0, cap_style=1, join_style=2)
+
+        # Draw the outer and inner boundaries perfectly
+        if not track_poly.is_empty:
+            x_ext, y_ext = track_poly.exterior.xy
+            ax.plot(x_ext, y_ext, color='black', linewidth=2)
+            
+            for interior in track_poly.interiors:
+                x_int, y_int = interior.xy
+                ax.plot(x_int, y_int, color='black', linewidth=2)
         
     # 2. Draw Obstacles
     for ox, oy, orad in obstacles:

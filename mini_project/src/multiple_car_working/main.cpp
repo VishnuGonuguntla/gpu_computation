@@ -43,9 +43,9 @@ int main(){
 
     // main loop
     for (int i = 0; i <= total_steps; ++i){
-        float current_time = i*mppiparams.dt;
+        double current_time = i*mppiparams.dt;
 
-        std::vector<std::vector<std::pair<float, float>>> fleet_paths(simparams.num_cars);
+        std::vector<std::vector<std::pair<double, double>>> fleet_paths(simparams.num_cars);
         for (int c = 0; c < simparams.num_cars; ++c){
             fleet_paths[c] = fleet_brains[c].get_predicted_path(fleet_states[c], fleet[c]);
         }

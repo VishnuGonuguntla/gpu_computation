@@ -3,37 +3,37 @@
 #include <algorithm>
 
 struct CarState{
-    float x; // x-postion
-    float y; // y-postion
-    float psi; // heading angle
-    float vx; // forward velocity (longitudinal)
-    float vy; // side velocity (lateral)
-    float r; // yaw rate (rotational speed)
+    double x; // x-postion
+    double y; // y-postion
+    double psi; // heading angle
+    double vx; // forward velocity (longitudinal)
+    double vy; // side velocity (lateral)
+    double r; // yaw rate (rotational speed)
 };
 
 struct CarParams {
-    float M;        // Mass
-    float I_z;      // Inertia
-    float a;        // Distance to front
-    float b;        // Distance to rear
-    float C_f;      // Front stiffness
-    float C_r;      // Rear stiffness
-    float mu;       // road fricition coefficient
+    double M;        // Mass
+    double I_z;      // Inertia
+    double a;        // Distance to front
+    double b;        // Distance to rear
+    double C_f;      // Front stiffness
+    double C_r;      // Rear stiffness
+    double mu;       // road fricition coefficient
 };
 
 class Car{
     private:
         CarParams parameters;
-        const float g = 9.81f;
+        const double g = 9.81;
 
         // helper fucntions
-        float calculate_slip_angle(float v_x, float v_y, float r, float steering_angle, bool is_front);
-        float calculate_brush_force(float alpha, float F_z, float C, float u_F);
+        double calculate_slip_angle(double v_x, double v_y, double r, double steering_angle, bool is_front);
+        double calculate_brush_force(double alpha, double F_z, double C, double u_F);
 
     public:
         //constructor
         Car(CarParams vehicle_params);
 
-        CarState step_dynamics(CarState current, float u_delta, float u_F, float dt);
+        CarState step_dynamics(CarState current, double u_delta, double u_F, double dt);
 
 };

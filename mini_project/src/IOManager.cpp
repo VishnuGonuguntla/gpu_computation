@@ -38,7 +38,7 @@ MPPIParms IOManager::load_mppi_config(const std::string &file_name){
     MPPIParms params;
     std::ifstream file(file_name);
     std::string key;
-    float value;
+    double value;
 
     if(!file.is_open()){
         std::cerr << "Error: Could not open " << file_name << std::endl;
@@ -69,17 +69,17 @@ Trackdata IOManager::load_track_data(const std::string &file_name){
 
     while (file >> type) {
         if (type == "WIDTH") {
-            float w;
+            double w;
             file >> w;
             data.track_width = w;
         } 
         else if (type == "WAYPOINT") {
-            float x, y;
+            double x, y;
             file >> x >> y;
             data.waypoints.push_back({x, y});
         } 
         else if (type == "OBS") {
-            float x, y, radius;
+            double x, y, radius;
             file >> x >> y >> radius;
             data.obstacles.push_back({x, y, radius});
         }
@@ -90,7 +90,7 @@ Trackdata IOManager::load_track_data(const std::string &file_name){
 }
 
 
-void IOManager::log_step(std::ofstream& file, float time, int car_id, const CarState& state, float steer, float throttle, const std::vector<std::pair<float, float>>& predicted_path) {
+void IOManager::log_step(std::ofstream& file, double time, int car_id, const CarState& state, double steer, double throttle, const std::vector<std::pair<double, double>>& predicted_path) {
     if (file.is_open()) {
         file << std::fixed << std::setprecision(4)
              << time << " " 
@@ -145,7 +145,7 @@ std::ofstream IOManager::init_telemetry(const std::string& filename) {
         return file;
     }
 
-    // Write the column headers so the Python script knows what to parse
+    
     file << "Time CarID X Y Psi Vx Vy r Steer Throttle\n";
     return file;
 }

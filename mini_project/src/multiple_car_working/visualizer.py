@@ -22,12 +22,12 @@ def load_track_data(filename="track_data.txt"):
             if not parts: continue
             
             if parts[0] == "WIDTH":
-                width = float(parts[1])
+                width = double(parts[1])
             elif parts[0] == "WAYPOINT":
-                wx.append(float(parts[1]))
-                wy.append(float(parts[2]))
+                wx.append(double(parts[1]))
+                wy.append(double(parts[2]))
             elif parts[0] == "OBS":
-                obs.append((float(parts[1]), float(parts[2]), float(parts[3])))
+                obs.append((double(parts[1]), double(parts[2]), double(parts[3])))
                 
     if wx and wy:
         wx.append(wx[0])
@@ -54,7 +54,7 @@ def main():
                 
                 parts = line.split()
                 if len(parts) >= 10: 
-                    time = float(parts[0])
+                    time = double(parts[0])
                     car_id = int(parts[1])
                     
                     # If this is a new car we haven't seen yet, set up its arrays
@@ -66,16 +66,16 @@ def main():
                     
                     # Store the physics states
                     cars_data[car_id]['times'].append(time)
-                    cars_data[car_id]['xs'].append(float(parts[2]))
-                    cars_data[car_id]['ys'].append(float(parts[3]))
-                    cars_data[car_id]['psis'].append(float(parts[4]))      
-                    cars_data[car_id]['vxs'].append(float(parts[5]))       
-                    cars_data[car_id]['steers'].append(float(parts[8]))    
-                    cars_data[car_id]['throttles'].append(float(parts[9])) 
+                    cars_data[car_id]['xs'].append(double(parts[2]))
+                    cars_data[car_id]['ys'].append(double(parts[3]))
+                    cars_data[car_id]['psis'].append(double(parts[4]))      
+                    cars_data[car_id]['vxs'].append(double(parts[5]))       
+                    cars_data[car_id]['steers'].append(double(parts[8]))    
+                    cars_data[car_id]['throttles'].append(double(parts[9])) 
                     
                     # Store the predicted MPPI path (starting at index 10)
-                    whip_x = [float(parts[i]) for i in range(10, len(parts), 2)]
-                    whip_y = [float(parts[i+1]) for i in range(10, len(parts), 2)]
+                    whip_x = [double(parts[i]) for i in range(10, len(parts), 2)]
+                    whip_y = [double(parts[i+1]) for i in range(10, len(parts), 2)]
                     cars_data[car_id]['whips'].append((whip_x, whip_y))
                     
     except FileNotFoundError:

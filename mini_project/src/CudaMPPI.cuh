@@ -4,40 +4,41 @@
 #include "MPPI.h" 
 #include "IOManager.h"
 #include <curand_kernel.h>
+#include <ctime>
 
 // device
 struct MPPIDeviceData {
     //states
-    float* ghost_x;
-    float* ghost_y;
-    float* ghost_psi;
-    float* ghost_vx;
-    float* ghost_vy;
-    float* ghost_r;
+    double* ghost_x;
+    double* ghost_y;
+    double* ghost_psi;
+    double* ghost_vx;
+    double* ghost_vy;
+    double* ghost_r;
     
-    float* costs;           
+    double* costs;           
     
-    float* nominal_steer;   
-    float* nominal_throttle;
+    double* nominal_steer;   
+    double* nominal_throttle;
 
     // for other cars or dynamic obstacles 
-    float* obs_x;
-    float* obs_y;
+    double* obs_x;
+    double* obs_y;
 
 
     //for static obstacles
-    float* static_obs_x;
-    float* static_obs_y;
-    float* static_obs_radius;
+    double* static_obs_x;
+    double* static_obs_y;
+    double* static_obs_radius;
 
 
     //for storing the noise  
-    float* noise_throttle;
-    float* noise_steer;
+    double* noise_throttle;
+    double* noise_steer;
 
     //stroing weights 
-    float* weights;
-    float* sum_weights;
+    double* weights;
+    double* sum_weights;
 
 };
 
@@ -52,13 +53,14 @@ private:
     curandState* d_rng_states;
     
     // Track data
-    float* d_track_x;
-    float* d_track_y;
+    double* d_track_x;
+    double* d_track_y;
     int track_size;
-    float track_width;
+    double track_width;
 
+    int total_cars;
     int max_obs_cars;
-    float target_speed;
+    double target_speed;
     int num_static_obs;
 
     // Helper functions 
@@ -75,11 +77,11 @@ public:
     ~CudaMPPI();
 
     ControlInput get_best_control(const CarState& current_state, 
-                                  const std::vector<std::vector<std::pair<float, float>>>& other_paths, 
+                                  const std::vector<std::vector<std::pair<double, double>>>& other_paths, 
                                   int my_car_id);
                                   
-    std::vector<std::pair<float, float>> get_predicted_path(const CarState& current_state, Car& car_model);
-    void set_target_speed(const float speed);
+    std::vector<std::pair<double, double>> get_predicted_path(const CarState& current_state, Car& car_model, int my_car_id);
+    
 };
 
 
@@ -89,22 +91,23 @@ __global__ void rollout_ghosts_kernel(
     MPPIDeviceData d_data, 
     MPPIParms params,
     CarParams v_params,
-    float target_speed,
+    double target_speed,
     curandState* d_rng_states,
-    float* d_track_x, 
-    float* d_track_y, 
+    double* d_track_x, 
+    double* d_track_y, 
     int track_size, 
-    float track_width,
+    double track_width,
     int max_obs_cars,
     int num_static_obs,
-    float start_x, 
-    float start_y, 
-    float start_psi, 
-    float start_vx,
-    float start_vy, 
-    float start_r
+    double start_x, 
+    double start_y, 
+    double start_psi, 
+    double start_vx,
+    double start_vy, 
+    double start_r,
+    int my_car_id
 );
 
 __global__ void compute_weights_kernel(MPPIDeviceData d_data, MPPIParms params);
 
-__global__ void update_trajectory_kernel(MPPIDeviceData d_data, MPPIParms params);
+__global__ void update_trajectory_kernel(MPPIDeviceData d_data, MPPIParms params, int my_car_id);
