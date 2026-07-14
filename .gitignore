@@ -39,3 +39,8 @@
 
 # debug information files
 *.dwo
+.vscode
+
+.clangd
+mppi-cuda
+run.sh

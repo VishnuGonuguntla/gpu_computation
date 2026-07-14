@@ -1,7 +1,7 @@
 #include "MPPI.h"
 
 //constuructor
-MPPI::MPPI(const MPPIParms &params){ 
+MPPI::MPPI(const paramMap &params){ 
     num_samples = params.samples;
     horizon = params.steps; 
     dt = params.lambda;

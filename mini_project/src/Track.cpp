@@ -8,13 +8,13 @@
 
 // constructor
 Track::Track(double width) {
-    track_width = width;
+    trackWidth = width;
 }
 
 
 void Track::add_waypoints(const std::vector<Point2D> &waypoints){
     for (const auto &way: waypoints){
-        center_line.push_back({way.x, way.y});
+        centerLine.push_back({way.x, way.y});
     }
     
 }
@@ -46,23 +46,23 @@ double Track::get_position_cost(double car_x, double car_y) {
     Point2D car_pos = {car_x, car_y};
 
     // 1. Check Track Boundaries
-    if (center_line.size() >= 2) {
+    if (centerLine.size() >= 2) {
         double min_dist = std::numeric_limits<double>::max(); // infinity
         
         // Loop through all segments to find the closest one // this has complexity of O(N) need to reduce this 
-        for (size_t i = 0; i < center_line.size() - 1; ++i) {
-            double dist = distance_to_segment(car_pos, center_line[i], center_line[i+1]);
+        for (size_t i = 0; i < centerLine.size() - 1; ++i) {
+            double dist = distance_to_segment(car_pos, centerLine[i], centerLine[i+1]);
             if (dist < min_dist){
                 min_dist = dist;
             }
         }
         
         // Close the loop (connect last point to first point)
-        double loop_dist = distance_to_segment(car_pos, center_line.back(), center_line.front());
+        double loop_dist = distance_to_segment(car_pos, centerLine.back(), centerLine.front());
         if (loop_dist < min_dist) min_dist = loop_dist;
 
         // If the car is further from the center than half the track width, it crashed!
-        if (min_dist > (track_width / 2.0)+0.25) {
+        if (min_dist > (trackWidth / 2.0)+0.25) {
             total_cost += 100000000.0; // Massive penalty for driving off-track
         }
     }
@@ -78,13 +78,4 @@ double Track::get_position_cost(double car_x, double car_y) {
     }
 
     return total_cost;
-}
-
-const std::vector<Point2D>& Track::get_center_line() const {
-    return center_line;
-}
-
-
-double Track::get_track_width() const {
-    return track_width;
 }

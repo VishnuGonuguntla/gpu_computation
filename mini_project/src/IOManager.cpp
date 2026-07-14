@@ -34,8 +34,8 @@ std::vector<CarSetup> IOManager::load_cars_config(const std::string &file_name){
     return fleet_setups;
 }
 
-MPPIParms IOManager::load_mppi_config(const std::string &file_name){
-    MPPIParms params;
+paramMap IOManager::load_mppi_config(const std::string &file_name){
+    paramMap params;
     std::ifstream file(file_name);
     std::string key;
     double value;

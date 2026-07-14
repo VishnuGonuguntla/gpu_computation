@@ -5,6 +5,11 @@
 #include "IOManager.h"
 #include <curand_kernel.h>
 #include <ctime>
+#include <map>
+
+#define paramMap std::map<std::string, double>
+#define x(i) (2*i+0)
+#define y(i) (2*i+1)
 
 // device
 struct MPPIDeviceData {
@@ -45,7 +50,7 @@ struct MPPIDeviceData {
 
 class CudaMPPI {
 private:
-    MPPIParms params;
+    paramMap params;
     CarParams vehicle_params;
     
     // Device Pointers 
@@ -66,11 +71,11 @@ private:
     // Helper functions 
     void allocate_device_memory();
     void free_device_memory();
-    void init_curand();
+    // void init_curand();
 
 public:
     // Constructor: Takes existing parameters and sets up the GPU
-    CudaMPPI(const MPPIParms& mppi_params, const CarSetup& setup, const Trackdata& track_data, int num_cars);
+    CudaMPPI(std::map<std::string, double>& params, const CarSetup& setup, const Track& track_data);
 
     
     // Destructor
@@ -81,33 +86,33 @@ public:
                                   int my_car_id);
                                   
     std::vector<std::pair<double, double>> get_predicted_path(const CarState& current_state, Car& car_model, int my_car_id);
-    
+    void setupCurand();
 };
 
 
-__global__ void setup_curand_kernel(curandState* state, unsigned long seed, int total_ghosts);
+// __global__ void setup_curand_kernel(curandState* state, unsigned long seed, int total_ghosts);
 
-__global__ void rollout_ghosts_kernel(
-    MPPIDeviceData d_data, 
-    MPPIParms params,
-    CarParams v_params,
-    double target_speed,
-    curandState* d_rng_states,
-    double* d_track_x, 
-    double* d_track_y, 
-    int track_size, 
-    double track_width,
-    int max_obs_cars,
-    int num_static_obs,
-    double start_x, 
-    double start_y, 
-    double start_psi, 
-    double start_vx,
-    double start_vy, 
-    double start_r,
-    int my_car_id
-);
+// __global__ void rollout_ghosts_kernel(
+//     MPPIDeviceData d_data, 
+//     paramMap params,
+//     CarParams v_params,
+//     double target_speed,
+//     curandState* d_rng_states,
+//     double* d_track_x, 
+//     double* d_track_y, 
+//     int track_size, 
+//     double track_width,
+//     int max_obs_cars,
+//     int num_static_obs,
+//     double start_x, 
+//     double start_y, 
+//     double start_psi, 
+//     double start_vx,
+//     double start_vy, 
+//     double start_r,
+//     int my_car_id
+// );
 
-__global__ void compute_weights_kernel(MPPIDeviceData d_data, MPPIParms params);
+// __global__ void compute_weights_kernel(MPPIDeviceData d_data, paramMap params);
 
-__global__ void update_trajectory_kernel(MPPIDeviceData d_data, MPPIParms params, int my_car_id);
+// __global__ void update_trajectory_kernel(MPPIDeviceData d_data, paramMap params, int my_car_id);

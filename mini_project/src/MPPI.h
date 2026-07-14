@@ -13,7 +13,7 @@ struct ControlInput {
     double throttle;
 };
 
-struct MPPIParms{
+struct paramMap{
     int samples;
     int steps;
     double dt;
@@ -44,7 +44,7 @@ private:
 
 public:
     // Constructor
-    MPPI(const MPPIParms& params);
+    MPPI(const paramMap& params);
 
     // THE BRAIN: Takes the current state, simulates the ghosts, and returns the best action
     ControlInput get_best_control(const CarState& current_state, Car& car_model, Track& track, const std::vector<std::vector<std::pair<double, double>>>& other_paths, int mycar_id);

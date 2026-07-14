@@ -20,18 +20,18 @@ struct SimParams{
     int num_cars = 1;
 };
 
-struct CarSetup{
-    CarParams params;
-    CarState initial_state;
-    double target_speed;
-};
+// struct CarSetup{
+//     CarParams params;
+//     CarState initial_state;
+//     double target_speed;
+// };
 
 
 
 class IOManager{
 public:
     std::vector<CarSetup> load_cars_config(const std::string &file_name);
-    MPPIParms load_mppi_config(const std::string &file_name);
+    paramMap load_mppi_config(const std::string &file_name);
     Trackdata load_track_data(const std::string &file_name);
     SimParams load_sim_config(const std::string &file_name);
 

@@ -21,6 +21,11 @@ struct CarParams {
     double mu;       // road fricition coefficient
 };
 
+struct CarSetup{
+    CarParams params;
+    CarState initial_state;
+    double target_speed;
+};
 class Car{
     private:
         CarParams parameters;
@@ -32,6 +37,7 @@ class Car{
 
     public:
         //constructor
+        Car() = default;
         Car(CarParams vehicle_params);
 
         CarState step_dynamics(CarState current, double u_delta, double u_F, double dt);

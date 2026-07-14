@@ -1,0 +1,11 @@
+# MPPI Configuration
+samples 1000
+steps 200
+dt 0.02
+lambda 1.0
+std_steer 0.6
+std_throttle 1000
+
+# Simulation Configuration
+totalTime 30
+numCars 9
