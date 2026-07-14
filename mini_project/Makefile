@@ -21,16 +21,19 @@ mk-target-dir:
 	mkdir -p $(BUILD_DIR)
 
 # build rules
-# mppi: main.cu Car.cpp CudaMPPI.cu IOManager.cpp Car.h CudaMPPI.cuh IOManager.h
-# 	$(NVCC) $(NVCCFLAGS) -arch=sm_60 -o mppi main.cu Car.cpp CudaMPPI.cu IOManager.cpp $(LDFLAGS)
-$(targets): $(SRC_DIR)/main.cu $(SRC_DIR)/Track.cpp $(SRC_DIR)/Car.cpp $(SRC_DIR)/Helper.cpp
-	${NVCC} $(NVCCFLAGS) -o $(TEST_CASE)-cuda $(SRC_DIR)/main.cu $(SRC_DIR)/Helper.cpp $(SRC_DIR)/Track.cpp $(SRC_DIR)/Car.cpp
+$(targets): $(SRC_DIR)/main.cu $(SRC_DIR)/Track.cpp $(SRC_DIR)/Car.cpp $(SRC_DIR)/Helper.cpp $(SRC_DIR)/CudaMPPI.cu $(SRC_DIR)/IOManager.cpp
+	${NVCC} $(NVCCFLAGS) -o $(TEST_CASE)-cuda $(SRC_DIR)/main.cu $(SRC_DIR)/Helper.cpp $(SRC_DIR)/Track.cpp $(SRC_DIR)/Car.cpp $(SRC_DIR)/CudaMPPI.cu $(SRC_DIR)/IOManager.cpp 
 # aliases without build directory
 .PHONY: mppi 
 mppi: mppi-cuda
 
 # clean target
-.PHONY: clean
+.PHONY: clean sanitize-clean sanitize-memory
 clean:
 	rm -f $(targets)
 	rm -r obj/*
+
+sanitize-race: all
+	compute-sanitizer --tool racecheck $(TEST_CASE)-cuda $(PARAMETERS)
+sanitize-memory: all
+	compute-sanitizer --tool memcheck $(TEST_CASE)-cuda $(PARAMETERS)

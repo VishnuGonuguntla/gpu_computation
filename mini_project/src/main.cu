@@ -2,7 +2,6 @@
 #include "CudaMPPI.cuh"
 #include <map>
 #include <string>
-#include <memory> 
 
 #include "Helper.cpp"
 #include "Track.h"
@@ -24,8 +23,6 @@ int main() {
     const double dt = params["dt"];
     // Initialize the classes 
     std::vector<CarSetup> cars; // = io.load_cars_config("carsConfig.par");
-    std::vector<Car> fleet(numCars);
-    std::vector<CarState> fleet_states(numCars);
     parseCarConfig("carsConfig.par", cars);
     #ifdef DEBUG
         std::cout << "Obstacles" << std::endl;
@@ -43,16 +40,15 @@ int main() {
     #endif
 
 
-    for (const auto &setup : cars) {
-        fleet.push_back(Car(setup.params));
-        fleet_states.push_back(setup.initial_state);
-    }
+    
 
-    CudaMPPI mppi(params, cars[0], track);
+    CudaMPPI mppi(params, cars, track);
+    mppi.allocate_device_memory();
+    mppi.setupCurand();
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     // Open the telemetry file
     std::ofstream telemetry_file = io.init_telemetry("telemetry.txt");
-
     std::cout << "Starting race loop (" << total_steps << " steps)..." << std::endl;
 
     // Main loop
@@ -61,30 +57,34 @@ int main() {
 
         // predicted paths for collision cehcking 
         std::vector<std::vector<std::pair<double, double>>> fleet_paths(numCars);
-        for (int c = 0; c < numCars; ++c) {
-            fleet_paths[c] = mppi.getPredictedPath(fleet_states[c], fleet[c], c);            
-        }
+        // for (int c = 0; c < numCars; ++c) {
+        //     fleet_paths[c] = mppi.getPredictedPath(fleet_states[c], fleet[c], c);            
+        // }
+        mppi.getPredictedPath();
+        CUDA_CHECK(cudaDeviceSynchronize());
+
 
         for(int c = 0; c < numCars; ++c) {
 
             // Predicting the future and choose the best inputs on GPU
 
-            ControlInput optimal = mppi.getBestControl(fleet_states[c], fleet_paths, c);
-            
+            // ControlInput optimal = mppi.getBestControl(fleet_states[c], fleet_paths, c);
+            mppi.getBestControl();
             //updated trajectory for logging
-            auto predicted_path = mppi.getPredictedPath(fleet_states[c], fleet[c], c);
-
+            // auto predicted_path = mppi.getPredictedPath(fleet_states[c], fleet[c], c);
+            mppi.getPredictedPath();
             // exectuing the best control 
-            fleet_states[c] = fleet[c].stepDynamics(fleet_states[c], optimal.steering, optimal.throttle, dt);
-            
+            // fleet_states[c] = fleet[c].stepDynamics(fleet_states[c], optimal.steering, optimal.throttle, dt);
+            // step dynamics should be run on each car.
             // Step C: Log the detail for simulation
-            io.log_step(telemetry_file,
-                        current_time,
-                        c,
-                        fleet_states[c],
-                        optimal.steering,
-                        optimal.throttle,
-                        predicted_path);
+            // io.log_step(telemetry_file,
+            //             current_time,
+            //             c,
+            //             fleet_states[c],
+            //             optimal.steering,
+            //             optimal.throttle,
+            //             predicted_path);
+            // update Output file with current information.<
         }
         
         // Print on terminal
