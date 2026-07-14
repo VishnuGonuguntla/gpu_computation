@@ -56,23 +56,28 @@ int main() {
         double current_time = i * dt;
 
         // predicted paths for collision cehcking 
-        std::vector<std::vector<std::pair<double, double>>> fleet_paths(numCars);
+        // std::vector<std::vector<std::pair<double, double>>> fleet_paths(numCars);
         // for (int c = 0; c < numCars; ++c) {
         //     fleet_paths[c] = mppi.getPredictedPath(fleet_states[c], fleet[c], c);            
         // }
         mppi.getPredictedPath();
         CUDA_CHECK(cudaDeviceSynchronize());
-
-
-        for(int c = 0; c < numCars; ++c) {
+        mppi.getBestControl();
+        CUDA_CHECK(cudaDeviceSynchronize());
+        mppi.getPredictedPath();
+        CUDA_CHECK(cudaDeviceSynchronize());
+        mppi.updateTrajectory();
+        CUDA_CHECK(cudaDeviceSynchronize());
+        
+        // for(int c = 0; c < numCars; ++c) {
 
             // Predicting the future and choose the best inputs on GPU
 
             // ControlInput optimal = mppi.getBestControl(fleet_states[c], fleet_paths, c);
-            mppi.getBestControl();
+            // mppi.getBestControl();
             //updated trajectory for logging
             // auto predicted_path = mppi.getPredictedPath(fleet_states[c], fleet[c], c);
-            mppi.getPredictedPath();
+            // mppi.getPredictedPath();
             // exectuing the best control 
             // fleet_states[c] = fleet[c].stepDynamics(fleet_states[c], optimal.steering, optimal.throttle, dt);
             // step dynamics should be run on each car.
@@ -85,12 +90,11 @@ int main() {
             //             optimal.throttle,
             //             predicted_path);
             // update Output file with current information.<
-        }
+        // }
         
         // Print on terminal
-        if (i % 100 == 0) {
+        if (i % 100 == 0)
             std::cout << "Simulated " << current_time << " seconds..." << std::endl;
-        }
     }
     
     telemetry_file.close();

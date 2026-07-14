@@ -7,6 +7,7 @@
 #include <ctime>
 #include <map>
 #include <iostream>
+#include <vector>
 #define x(i) (2*i+0)
 #define y(i) (2*i+1)
 
@@ -51,14 +52,18 @@ class CudaMPPI {
 private:
     std::map<std::string, double> params;
     CarParams vehicle_params;
-    std::vector<CarState> fleet_states;
+    std::vector<CarState> carStates;
+    std::vector<CarParams> carParams;
     std::vector<Car> fleet;
+    std::vector<ControlInput> control;
     std::vector<std::vector<std::pair<double,double>>> path;
     
     // Device Pointers 
     MPPIDeviceData d_data;
     curandState* d_rng_states;
-    
+    CarParams* d_carParams;
+    CarState* d_carStates;
+    ControlInput* d_control;
     // Track data
     double* d_track;
     // double* d_track_y;
@@ -82,10 +87,13 @@ public:
     // Destructor
     ~CudaMPPI();
 
-    ControlInput getBestControl();
+    void getBestControl();
                                   
-    std::vector<std::pair<double, double>> getPredictedPath();
+    void getPredictedPath();
     void setupCurand();
     void allocate_device_memory();
+    void copyParamsToDevice();
+    void updateTrajectory();
+
     void free_device_memory();
 };
