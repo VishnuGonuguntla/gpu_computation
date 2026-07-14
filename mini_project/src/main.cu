@@ -62,20 +62,20 @@ int main() {
         // predicted paths for collision cehcking 
         std::vector<std::vector<std::pair<double, double>>> fleet_paths(numCars);
         for (int c = 0; c < numCars; ++c) {
-            fleet_paths[c] = mppi.get_predicted_path(fleet_states[c], fleet[c], c);            
+            fleet_paths[c] = mppi.getPredictedPath(fleet_states[c], fleet[c], c);            
         }
 
         for(int c = 0; c < numCars; ++c) {
 
             // Predicting the future and choose the best inputs on GPU
 
-            ControlInput optimal = mppi.get_best_control(fleet_states[c], fleet_paths, c);
+            ControlInput optimal = mppi.getBestControl(fleet_states[c], fleet_paths, c);
             
             //updated trajectory for logging
-            auto predicted_path = mppi.get_predicted_path(fleet_states[c], fleet[c], c);
+            auto predicted_path = mppi.getPredictedPath(fleet_states[c], fleet[c], c);
 
             // exectuing the best control 
-            fleet_states[c] = fleet[c].step_dynamics(fleet_states[c], optimal.steering, optimal.throttle, dt);
+            fleet_states[c] = fleet[c].stepDynamics(fleet_states[c], optimal.steering, optimal.throttle, dt);
             
             // Step C: Log the detail for simulation
             io.log_step(telemetry_file,
@@ -87,7 +87,7 @@ int main() {
                         predicted_path);
         }
         
-        // Print on termianl 
+        // Print on terminal
         if (i % 100 == 0) {
             std::cout << "Simulated " << current_time << " seconds..." << std::endl;
         }

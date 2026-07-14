@@ -7,7 +7,6 @@
 #include <ctime>
 #include <map>
 
-#define paramMap std::map<std::string, double>
 #define x(i) (2*i+0)
 #define y(i) (2*i+1)
 
@@ -50,7 +49,7 @@ struct MPPIDeviceData {
 
 class CudaMPPI {
 private:
-    paramMap params;
+    std::map<std::string, double> params;
     CarParams vehicle_params;
     
     // Device Pointers 
@@ -61,12 +60,12 @@ private:
     double* d_track_x;
     double* d_track_y;
     int track_size;
-    double track_width;
+    double trackWidth;
 
-    int total_cars;
-    int max_obs_cars;
-    double target_speed;
-    int num_static_obs;
+    int totalCars;
+    int maxObsCars;
+    double targetSpeed;
+    int numStaticObs;
 
     // Helper functions 
     void allocate_device_memory();
@@ -75,17 +74,17 @@ private:
 
 public:
     // Constructor: Takes existing parameters and sets up the GPU
-    CudaMPPI(std::map<std::string, double>& params, const CarSetup& setup, const Track& track_data);
+    CudaMPPI(std::map<std::string, double>& params, const CarSetup& setup, Track& track_data);
 
     
     // Destructor
     ~CudaMPPI();
 
-    ControlInput get_best_control(const CarState& current_state, 
+    ControlInput getBestControl(const CarState& current_state, 
                                   const std::vector<std::vector<std::pair<double, double>>>& other_paths, 
                                   int my_car_id);
                                   
-    std::vector<std::pair<double, double>> get_predicted_path(const CarState& current_state, Car& car_model, int my_car_id);
+    std::vector<std::pair<double, double>> getPredictedPath(const CarState& current_state, Car& car_model, int my_car_id);
     void setupCurand();
 };
 
@@ -94,7 +93,7 @@ public:
 
 // __global__ void rollout_ghosts_kernel(
 //     MPPIDeviceData d_data, 
-//     paramMap params,
+//     std::map<std::string, double> params,
 //     CarParams v_params,
 //     double target_speed,
 //     curandState* d_rng_states,
@@ -113,6 +112,6 @@ public:
 //     int my_car_id
 // );
 
-// __global__ void compute_weights_kernel(MPPIDeviceData d_data, paramMap params);
+// __global__ void compute_weights_kernel(MPPIDeviceData d_data, std::map<std::string, double> params);
 
-// __global__ void update_trajectory_kernel(MPPIDeviceData d_data, paramMap params, int my_car_id);
+// __global__ void update_trajectory_kernel(MPPIDeviceData d_data, std::map<std::string, double> params, int my_car_id);

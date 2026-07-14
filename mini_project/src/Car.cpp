@@ -70,7 +70,7 @@ double Car::calculate_brush_force(double alpha, double F_z, double C, double u_F
 }
 
 // main dynamics
-CarState Car::step_dynamics(CarState current, double u_delta, double u_F, double dt) {
+CarState Car::stepDynamics(CarState current, double u_delta, double u_F, double dt) {
     CarState next;
 
     //clamping the steering and throttle valujes

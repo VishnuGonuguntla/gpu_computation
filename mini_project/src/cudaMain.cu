@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 
 
             // Step B: car executes those inputs and moves forward
-            fleet_states[c] = fleet[c].step_dynamics(fleet_states[c], optimal.steering, optimal.throttle, dt);
+            fleet_states[c] = fleet[c].stepDynamics(fleet_states[c], optimal.steering, optimal.throttle, dt);
             // Step c: log the detail for simulation
             io.log_step(telemetry_file,
             current_time,

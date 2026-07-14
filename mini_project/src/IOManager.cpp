@@ -34,8 +34,8 @@ std::vector<CarSetup> IOManager::load_cars_config(const std::string &file_name){
     return fleet_setups;
 }
 
-paramMap IOManager::load_mppi_config(const std::string &file_name){
-    paramMap params;
+std::map<std::string, double> IOManager::load_mppi_config(const std::string &file_name){
+    std::map<std::string, double> params;
     std::ifstream file(file_name);
     std::string key;
     double value;
@@ -46,12 +46,12 @@ paramMap IOManager::load_mppi_config(const std::string &file_name){
     }
 
     while(file >> key >> value){
-        if(key == "samples") params.samples = static_cast<int>(value);
-        else if (key == "steps") params.steps = static_cast<int>(value);
-        else if (key == "dt") params.dt = value;
-        else if (key == "lambda") params.lambda = value;
-        else if (key == "std_steer") params.std_steer = value;
-        else if (key == "std_throttle") params.std_throttle = value;
+        if(key == "samples") params["samples"] = static_cast<int>(value);
+        else if (key == "steps") params["steps"] = static_cast<int>(value);
+        else if (key == "dt") params["dt"] = value;
+        else if (key == "lambda") params["lambda"] = value;
+        else if (key == "std_steer") params["std_steer"] = value;
+        else if (key == "std_throttle") params["std_throttle"] = value;
     }
     file.close();
     return params;

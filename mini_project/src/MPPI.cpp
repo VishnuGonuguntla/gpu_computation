@@ -1,7 +1,7 @@
 #include "MPPI.h"
 
 //constuructor
-MPPI::MPPI(const paramMap &params){ 
+MPPI::MPPI(const MPPIParams &params){ 
     num_samples = params.samples;
     horizon = params.steps; 
     dt = params.lambda;
@@ -48,7 +48,7 @@ ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_mode
             double u_throttle = nominal_trajectory[t].throttle + n_throttle;
 
             // calulating the dynamics!
-            ghost_state = car_model.step_dynamics(ghost_state, u_steer, u_throttle, dt);
+            ghost_state = car_model.stepDynamics(ghost_state, u_steer, u_throttle, dt);
 
             //swarm collison check
             for (int other_id = 0; other_id < other_paths.size(); ++other_id) {
@@ -134,7 +134,7 @@ std::vector<std::pair<double, double>> MPPI::get_predicted_path(const CarState& 
     CarState sim_state = current_state;
     
     for (int t = 0; t < horizon; ++t) {
-        sim_state = car_model.step_dynamics(sim_state, nominal_trajectory[t].steering, nominal_trajectory[t].throttle, dt);
+        sim_state = car_model.stepDynamics(sim_state, nominal_trajectory[t].steering, nominal_trajectory[t].throttle, dt);
         path.push_back({sim_state.x, sim_state.y});
     }
     

@@ -6,6 +6,7 @@
 #include <cmath>
 #include <algorithm>
 #include <limits>
+#include <map>
 
 // steering and gas pedal commands
 struct ControlInput {
@@ -13,7 +14,7 @@ struct ControlInput {
     double throttle;
 };
 
-struct paramMap{
+struct MPPIParams{
     int samples;
     int steps;
     double dt;
@@ -44,7 +45,7 @@ private:
 
 public:
     // Constructor
-    MPPI(const paramMap& params);
+    MPPI(const MPPIParams& params);
 
     // THE BRAIN: Takes the current state, simulates the ghosts, and returns the best action
     ControlInput get_best_control(const CarState& current_state, Car& car_model, Track& track, const std::vector<std::vector<std::pair<double, double>>>& other_paths, int mycar_id);

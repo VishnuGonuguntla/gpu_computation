@@ -40,6 +40,6 @@ class Car{
         Car() = default;
         Car(CarParams vehicle_params);
 
-        CarState step_dynamics(CarState current, double u_delta, double u_F, double dt);
+        CarState stepDynamics(CarState current, double u_delta, double u_F, double dt);
 
 };

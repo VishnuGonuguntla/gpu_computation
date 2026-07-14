@@ -31,7 +31,7 @@ struct SimParams{
 class IOManager{
 public:
     std::vector<CarSetup> load_cars_config(const std::string &file_name);
-    paramMap load_mppi_config(const std::string &file_name);
+    std::map<std::string, double> load_mppi_config(const std::string &file_name);
     Trackdata load_track_data(const std::string &file_name);
     SimParams load_sim_config(const std::string &file_name);
 

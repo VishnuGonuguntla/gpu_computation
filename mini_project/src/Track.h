@@ -35,11 +35,11 @@ public:
     void add_waypoints(const std::vector<Point2D> &waypoints);
     void add_obstacles(const std::vector<Obstacle> &obstacles);
     const std::vector<Point2D>& getCenterLine() const { return centerLine; }
-    double getrackWidth() const { return trackWidth; }
+    const double getTrackWidth() { return trackWidth; }
     // Returns the penalty cost for a given X/Y position
     double get_position_cost(double car_x, double car_y);
-    std::vector<Point2D> getPoint2D() { return centerLine;}
-    std::vector<Obstacle> getObstacles() { return obstacles;}
+    std::vector<Point2D>& getPoint2D() { return centerLine;}
+    std::vector<Obstacle>& getObstacles() { return obstacles;}
 
     void setTrackWidth(double w) { trackWidth = w; }
     void addWaypoint(Point2D p) { centerLine.push_back(p); }
