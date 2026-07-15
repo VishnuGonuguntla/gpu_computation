@@ -8,8 +8,10 @@
 #include <map>
 #include <iostream>
 #include <vector>
-#define x(i) (2*i+0)
-#define y(i) (2*i+1)
+#include <iomanip>
+#include <fstream>
+#define x(i) (2*(i)+0)
+#define y(i) (2*(i)+1)
 
 // device
 struct MPPIDeviceData {
@@ -56,7 +58,7 @@ private:
     std::vector<CarParams> carParams;
     std::vector<Car> fleet;
     std::vector<ControlInput> control;
-    std::vector<std::vector<std::pair<double,double>>> path;
+    // std::vector<std::vector<std::pair<double,double>>> path;
     
     // Device Pointers 
     MPPIDeviceData d_data;
@@ -94,6 +96,7 @@ public:
     void allocate_device_memory();
     void copyParamsToDevice();
     void updateTrajectory();
+    void printLog(std::ofstream& file, double time);
 
     void free_device_memory();
 };

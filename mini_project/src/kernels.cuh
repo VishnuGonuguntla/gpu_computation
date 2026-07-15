@@ -1,9 +1,9 @@
 #include "MPPI.h"
 #include "cuda-util.cuh"
-#include <__clang_cuda_runtime_wrapper.h>
 #include <curand.h>
 #include "Car.h"
 #include "CudaMPPI.cuh"
+#include <iostream>
 
 // Helper function
 __device__ 
@@ -74,7 +74,7 @@ double distanceToSegment(double px, double py, double x1, double y1, double x2, 
 __global__
 void kernelPredictedPath(int numCars, int steps, double dt, double* d_steer, double* d_throttle, CarState* d_carStates, CarParams* d_carParams) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < numCars * steps) return;
+    if (idx >= numCars * steps) return;
     int car = idx / steps;
     int step = idx % steps;
 
@@ -107,7 +107,6 @@ void kernelPredictedPath(int numCars, int steps, double dt, double* d_steer, dou
     double F_yR = brushForce(alpha_r, F_zR, d_carParams[car].C_r, throttle / 2.0, d_carParams[car].mu);
 
 
-
     // 4. Dynamic Equations
     double d_vx = (throttle - F_yF * std::sin(steer)) / d_carParams[car].M + (r * vy);    
     double d_vy = (F_yF + F_yR) / d_carParams[car].M - (r * vx);
@@ -133,7 +132,7 @@ void kernelRolloutGhosts(
     int numCars, double dt,
     int samples,
     int steps,
-    CarParams v_params,
+    CarParams* d_carParams,
     double target_speed,
     curandState* d_rng_states,
     CarState* d_carStates,
@@ -158,6 +157,15 @@ void kernelRolloutGhosts(
     double vx =  d_carStates[car].vx;
     double vy =  d_carStates[car].vy;
     double r =   d_carStates[car].r;
+    double M = d_carParams[car].M;
+    double a = d_carParams[car].a;
+    double b = d_carParams[car].b;
+    double C_f = d_carParams[car].C_f;
+    double C_r = d_carParams[car].C_r;
+    double I_z = d_carParams[car].I_z;
+    double mu = d_carParams[car].mu;
+    
+    
 
     double total_cost = 0.0;
 
@@ -193,22 +201,22 @@ void kernelRolloutGhosts(
         // throttle = fmax(fmin(throttle, max_throttle), min_throttle);
 
         // Slip Angles 
-        double alpha_f = slipAngle(vx, vy, r, steer, true, v_params.a, v_params.b);
-        double alpha_r = slipAngle(vx, vy, r, 0.0, false, v_params.a, v_params.b);
+        double alpha_f = slipAngle(vx, vy, r, steer, true, a, b);
+        double alpha_r = slipAngle(vx, vy, r, 0.0, false, a, b);
 
         // Normal Forces
         double g = 9.81;
-        double F_zF = (v_params.M * g * v_params.b) / (v_params.a + v_params.b);
-        double F_zR = (v_params.M * g * v_params.a) / (v_params.a + v_params.b);  
+        double F_zF = (M * g * b) / (a + b);
+        double F_zR = (M * g * a) / (a + b);  
 
         // Brush Forces 
-        double F_yF = brushForce(alpha_f, F_zF, v_params.C_f, throttle / 2.0, v_params.mu);
-        double F_yR = brushForce(alpha_r, F_zR, v_params.C_r, throttle / 2.0, v_params.mu);
+        double F_yF = brushForce(alpha_f, F_zF, C_f, throttle / 2.0, mu);
+        double F_yR = brushForce(alpha_r, F_zR, C_r, throttle / 2.0, mu);
 
         // Dynamic Equations 
-        double d_vx = (throttle - F_yF * sin(steer)) / v_params.M + (r * vy);    
-        double d_vy = (F_yF + F_yR) / v_params.M - (r * vx);
-        double d_r  = (v_params.a * F_yF - v_params.b * F_yR) / v_params.I_z;
+        double d_vx = (throttle - F_yF * sin(steer)) / M + (r * vy);    
+        double d_vy = (F_yF + F_yR) / M - (r * vx);
+        double d_r  = (a * F_yF - b * F_yR) / I_z;
 
         // Kinematic Equations
         double d_x   = vx * cos(psi) - vy * sin(psi);
@@ -235,7 +243,7 @@ void kernelRolloutGhosts(
                 }
             }
             
-            double loop_dist = distanceToSegment(x, y, d_track[(track_size-1)], d_track[y(track_size-1)], d_track[x(0)], d_track[y(0)]);
+            double loop_dist = distanceToSegment(x, y, d_track[x(track_size-1)], d_track[y(track_size-1)], d_track[x(0)], d_track[y(0)]);
             if (loop_dist < min_dist) {
                 min_dist = loop_dist;
             }
@@ -341,8 +349,9 @@ void kernelUpdateTrajectory(MPPIDeviceData d_data, int numCars, int samples, int
     d_data.nominal_throttle[offset + step] = fmax(fmin(d_data.nominal_throttle[offset + step], 10000.0), -10000.0);
 }
 __global__
-void kernelUpdateCarPosition(CarState* d_carStates, CarParams* d_carParams, ControlInput* control, double dt, double g = 9.81) {
+void kernelUpdateCarPosition(CarState* d_carStates, CarParams* d_carParams, ControlInput* control,int numCars, double dt, double g = 9.81) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= numCars) return;
     double u_delta = control[idx].steering;
     double u_F = control[idx].throttle;
     CarState current = d_carStates[idx];
@@ -401,8 +410,4 @@ void kernelUpdateControl(ControlInput* d_control, double* d_nominalSteer, double
     }
     d_nominalThrottle[offset + steps -1] = 0.0;
     d_nominalSteer[offset + steps -1] = 0.0;
-    
-    // // making sure the last vlaue is not garbage
-    // h_nominal_steer[params["steps"] - 1] = 0.0;
-    // h_nominal_throttle[params["steps"] - 1] = 0.0;
 }

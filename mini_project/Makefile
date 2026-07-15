@@ -10,7 +10,7 @@ NVCC = nvcc
 GCC = gcc
 # Added -g -G for debugging, removed -O3 because optimization 
 # interferes with accurate line-by-line stepping
-NVCCFLAGS = -std=c++14 -g -G -DDEBUG
+NVCCFLAGS = -std=c++14 -g -G -arch=sm_80
 #NVCCFLAGS = -O3 -std=c++14 
 LDFLAGS = -lcurand
 
