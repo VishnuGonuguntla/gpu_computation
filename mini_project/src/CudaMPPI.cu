@@ -18,7 +18,7 @@ void CudaMPPI::getBestControl(){
     int num_obs_cars = numCars - 1; //everyone except the same 
     int samples = params["samples"];
     int steps = params["steps"];
-    int dt = params["dt"];
+    double dt = params["dt"];
     int lambda = params["lambda"];
 
     //allocating the memory for the normaina trajectories of other cars
@@ -39,12 +39,12 @@ void CudaMPPI::getBestControl(){
 
     // size_t obs_bytes = num_obs_cars * steps * sizeof(double);
     // cudaMemcpy(d_data.obs, flat_obs.data(), 2*obs_bytes, cudaMemcpyHostToDevice);
-    // // cudaMemcpy(d_data.obs_y, flat_obs_y.data(), obs_bytes, cudaMemcpyHostToDevice);
+    // cudaMemcpy(d_data.obs_y, flat_obs_y.data(), obs_bytes, cudaMemcpyHostToDevice);
 
 
     //kernel launch
 
-    int block = 256;
+    int block = 512;
     int grid = (numCars*samples + block - 1) / block;
 
     kernelRolloutGhosts<<<grid, block>>>(
@@ -105,56 +105,6 @@ inline double cpu_brush_force(double alpha, double F_z, double C, double u_F, do
     }
 }
 
-// This cpu call should spawn cuda threads over cars. it should generated threads = numCars * steps
-void CudaMPPI::getPredictedPath() {
-    std::vector<std::pair<double, double>> path;
-    int numCars = params["numCars"];
-    double dt = params["dt"];
-    int steps = params["steps"];
-
-    int block = 512;
-    int grid = (numCars*steps + block - 1) / block;
-    kernelPredictedPath<<<grid, block>>>(numCars, steps, dt, d_path, d_data.nominal_steer, d_data.nominal_throttle, d_carStates, d_carParams);
-}
-
-
-//destructor
-CudaMPPI::~CudaMPPI() {
-    //Free Track Data
-    cudaFree(d_track);
-    // Free Static Obstacles
-    if (numStaticObs) {
-        cudaFree(d_data.static_obs);
-    }
-
-    // Free Dynamic Obstacles (Only if they were allocated)
-    if (maxObsCars > 0) {
-        cudaFree(d_data.obs);
-    }
-
-    // Free Ghost Car States
-    cudaFree(d_data.ghost);
-    cudaFree(d_data.ghost_v);
-    cudaFree(d_data.ghost_psi);
-    cudaFree(d_data.ghost_r);
-
-    // Free Nominal Trajectories & Noise Matrices
-    cudaFree(d_data.nominal_steer);
-    cudaFree(d_data.nominal_throttle);
-    cudaFree(d_data.noise_steer);
-    cudaFree(d_data.noise_throttle);
-
-    // Free Costs, Weights, and Reduction Variables
-    cudaFree(d_data.costs);
-    cudaFree(d_data.weights);
-    cudaFree(d_data.sum_weights);
-
-    //Free curand Random States
-    cudaFree(d_rng_states);
-}
-
-
-
 //constructor - cpu memory and also copying to gpu done 
 CudaMPPI::CudaMPPI(std::map<std::string, double>& params, const std::vector<CarSetup>& setup, Track& track_data){
     this->params = params;
@@ -169,7 +119,7 @@ CudaMPPI::CudaMPPI(std::map<std::string, double>& params, const std::vector<CarS
         fleet.push_back(Car(car.params));
         carStates.push_back(car.initial_state);
     }
-    control.reserve(totalCars);
+    control.resize(totalCars);
 
     track_size = track_data.getCenterLine().size();
 
@@ -196,7 +146,7 @@ CudaMPPI::CudaMPPI(std::map<std::string, double>& params, const std::vector<CarS
     cudaMalloc(& d_track, 2*track_bytes);
 
     cudaMemcpy(d_track, temp.data(), 2*track_bytes, cudaMemcpyHostToDevice);
-    path.reserve(2*totalCars*steps);
+    path.resize(2*totalCars*steps);
 
     //obstacles
 
@@ -213,10 +163,21 @@ CudaMPPI::CudaMPPI(std::map<std::string, double>& params, const std::vector<CarS
         size_t obs_bytes = numStaticObs * sizeof(double);
 
         cudaMalloc(&d_data.static_obs, 3*obs_bytes);
-        cudaMemcpy(d_data.static_obs, h_obs.data(), obs_bytes, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_data.static_obs, h_obs.data(), 3*obs_bytes, cudaMemcpyHostToDevice);
     }
 }
 
+// This cpu call should spawn cuda threads over cars. it should generated threads = numCars * steps
+void CudaMPPI::getPredictedPath() {
+    std::vector<std::pair<double, double>> path;
+    int numCars = params["numCars"];
+    double dt = params["dt"];
+    int steps = params["steps"];
+
+    int block = 512;
+    int grid = (numCars + block - 1) / block;
+    kernelPredictedPath<<<grid, block>>>(numCars, steps, dt, d_path, d_data.nominal_steer, d_data.nominal_throttle, d_carStates, d_carParams);
+}
 
 // allocating the memory on device 
 void CudaMPPI::allocate_device_memory() {
@@ -265,7 +226,7 @@ void CudaMPPI::allocate_device_memory() {
     cudaMalloc(&d_data.noise_steer, size_noise);
     cudaMalloc(&d_data.noise_throttle, size_noise);
 
-    //weights 
+    // weights 
     // cudaMalloc(&d_data.weights, size_ghost);
     cudaMalloc(&d_data.sum_weights, 1*sizeof(double));
     cudaMalloc(&d_control, numCars*sizeof(ControlInput));
@@ -279,8 +240,9 @@ void CudaMPPI::copyParamsToDevice() {
     cudaError_t err2 = cudaMemcpy(d_carStates, carStates.data(), numCars * sizeof(CarState), cudaMemcpyHostToDevice);
 }
 void CudaMPPI::setupCurand() {
+    int numCars = params["numCars"];
     int threads_per_block = 1024;
-    int blocks_per_grid = (params["samples"] + threads_per_block - 1) / threads_per_block;
+    int blocks_per_grid = (numCars*params["samples"] + threads_per_block - 1) / threads_per_block;
     setup_curand_kernel<<<blocks_per_grid, threads_per_block>>>(d_rng_states, (unsigned long)time(NULL), params["samples"]);
 }
 
@@ -295,11 +257,13 @@ void CudaMPPI::updateTrajectory() {
 void CudaMPPI::printLog(std::ofstream& file, double time) {
     int numCars = params["numCars"];
     int steps = params["steps"];
+    
     cudaMemcpy(carStates.data(), d_carStates, numCars*sizeof(CarState), cudaMemcpyDeviceToHost);
     cudaMemcpy(control.data(), d_control, numCars*sizeof(ControlInput), cudaMemcpyDeviceToHost);
     cudaMemcpy(path.data(), d_path, 2*numCars*steps*sizeof(double), cudaMemcpyDeviceToHost);
     
     for (int i = 0; i < numCars; ++i) {
+        int offset = i * steps;
         if (file.is_open()) {
             file << std::fixed << std::setprecision(4)
                     << time << " " 
@@ -315,11 +279,46 @@ void CudaMPPI::printLog(std::ofstream& file, double time) {
 
             // Append the predicted path (the optimal tentacle) to the end of the line
             for (int j = 0; j < steps; ++j) {
-                file << " " << path[x(i)] << " " << path[y(i)];   
+                file << " " << path[x(offset + j)] << " " << path[y(offset + j)];
             }
             
             // Finally, end the line
             file << "\n";           
         }
     }
+}
+
+//destructor
+CudaMPPI::~CudaMPPI() {
+    //Free Track Data
+    cudaFree(d_track);
+    // Free Static Obstacles
+    if (numStaticObs) {
+        cudaFree(d_data.static_obs);
+    }
+
+    // Free Dynamic Obstacles (Only if they were allocated)
+    if (maxObsCars > 0) {
+        cudaFree(d_data.obs);
+    }
+
+    // Free Ghost Car States
+    cudaFree(d_data.ghost);
+    cudaFree(d_data.ghost_v);
+    cudaFree(d_data.ghost_psi);
+    cudaFree(d_data.ghost_r);
+
+    // Free Nominal Trajectories & Noise Matrices
+    cudaFree(d_data.nominal_steer);
+    cudaFree(d_data.nominal_throttle);
+    cudaFree(d_data.noise_steer);
+    cudaFree(d_data.noise_throttle);
+
+    // Free Costs, Weights, and Reduction Variables
+    cudaFree(d_data.costs);
+    cudaFree(d_data.weights);
+    cudaFree(d_data.sum_weights);
+
+    //Free curand Random States
+    cudaFree(d_rng_states);
 }

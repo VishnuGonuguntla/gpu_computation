@@ -7,5 +7,5 @@ std_steer 0.6
 std_throttle 1000
 
 # Simulation Configuration
-totalTime 6
+totalTime 30
 numCars 9

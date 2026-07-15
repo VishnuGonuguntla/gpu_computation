@@ -10,7 +10,7 @@ NVCC = nvcc
 GCC = gcc
 # Added -g -G for debugging, removed -O3 because optimization 
 # interferes with accurate line-by-line stepping
-NVCCFLAGS = -std=c++14 -g -G -arch=sm_80
+NVCCFLAGS = -std=c++14 -arch=sm_80
 #NVCCFLAGS = -O3 -std=c++14 
 LDFLAGS = -lcurand
 
@@ -21,7 +21,7 @@ mk-target-dir:
 	mkdir -p $(BUILD_DIR)
 
 # build rules
-$(targets): $(SRC_DIR)/main.cu $(SRC_DIR)/Track.cpp $(SRC_DIR)/Car.cpp $(SRC_DIR)/Helper.cpp $(SRC_DIR)/CudaMPPI.cu $(SRC_DIR)/IOManager.cpp
+$(targets): $(SRC_DIR)/main.cu $(SRC_DIR)/Track.cpp $(SRC_DIR)/Car.cpp $(SRC_DIR)/Helper.cpp $(SRC_DIR)/CudaMPPI.cu $(SRC_DIR)/IOManager.cpp $(SRC_DIR)/kernels.cuh 
 	${NVCC} $(NVCCFLAGS) -o $(TEST_CASE)-cuda $(SRC_DIR)/main.cu $(SRC_DIR)/Helper.cpp $(SRC_DIR)/Track.cpp $(SRC_DIR)/Car.cpp $(SRC_DIR)/CudaMPPI.cu $(SRC_DIR)/IOManager.cpp 
 # aliases without build directory
 .PHONY: mppi 

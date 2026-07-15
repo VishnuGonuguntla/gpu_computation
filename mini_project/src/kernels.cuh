@@ -74,9 +74,10 @@ double distanceToSegment(double px, double py, double x1, double y1, double x2, 
 __global__
 void kernelPredictedPath(int numCars, int steps, double dt, double* d_path,  double* d_steer, double* d_throttle, CarState* d_carStates, CarParams* d_carParams) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= numCars * steps) return;
-    int car = idx / steps;
-    int step = idx % steps;
+    if (idx >= numCars) return;
+    int car = idx;
+    int offset = idx * steps;
+    // int step = idx % steps;
 
     double x = d_carStates[car].x;
     double y = d_carStates[car].y;
@@ -84,49 +85,52 @@ void kernelPredictedPath(int numCars, int steps, double dt, double* d_path,  dou
     double vx = d_carStates[car].vx;
     double vy = d_carStates[car].vy;
     double r = d_carStates[car].r;
+    for (int step = 0; step < steps; ++step) {
+        double steer = d_steer[offset + step];
+        double throttle = d_throttle[offset + step];
+        
+        // 1. Exact Slip Angles (with safe_vx clamp)
+        double safe_vx = vx;
+        if (std::fabs(safe_vx) < 0.01) {
+            safe_vx = (safe_vx >= 0.0) ? 0.01 : -0.01;
+        }
+        double alpha_f = std::atan((vy + d_carParams[car].a * r) / safe_vx) - steer;
+        double alpha_r = std::atan((vy - d_carParams[car].b * r) / safe_vx);
 
-    double steer = d_steer[step];
-    double throttle = d_throttle[step];
-    
-    // 1. Exact Slip Angles (with safe_vx clamp)
-    double safe_vx = vx;
-    if (std::fabs(safe_vx) < 0.01) {
-        safe_vx = (safe_vx >= 0.0) ? 0.01 : -0.01;
+        // 2. Normal Forces
+        double g = 9.81;
+        double F_zF = (d_carParams[car].M * g * d_carParams[car].b) / (d_carParams[car].a + d_carParams[car].b);
+        double F_zR = (d_carParams[car].M * g * d_carParams[car].a) / (d_carParams[car].a + d_carParams[car].b);
+
+        // 3. Brush Forces (You will need to re-implement your brush logic here or call a CPU equivalent)
+        // For simplicity, assuming you have a cpu_brush_force function that matches the device one
+        double F_yF = brushForce(alpha_f, F_zF, d_carParams[car].C_f, throttle / 2.0, d_carParams[car].mu);
+        double F_yR = brushForce(alpha_r, F_zR, d_carParams[car].C_r, throttle / 2.0, d_carParams[car].mu);
+
+
+        // 4. Dynamic Equations
+        double d_vx = (throttle - F_yF * std::sin(steer)) / d_carParams[car].M + (r * vy);    
+        double d_vy = (F_yF + F_yR) / d_carParams[car].M - (r * vx);
+        double d_r  = (d_carParams[car].a * F_yF - d_carParams[car].b * F_yR) / d_carParams[car].I_z;
+
+        // 5. Kinematic Equations
+        double d_x   = vx * std::cos(psi) - vy * std::sin(psi);
+        double d_y   = vx * std::sin(psi) + vy * std::cos(psi);
+        double d_psi = r;
+
+        // 6. Euler Integration
+        // d_carStates[car].vx  = vx + d_vx * dt;
+        // d_carStates[car].vy  = vy + d_vy * dt;
+        // d_carStates[car].r   = r + d_r * dt;
+        // d_carStates[car].x   = x + d_x * dt;
+        // d_carStates[car].y   = y + d_y * dt;
+        // d_carStates[car].psi = psi + d_psi * dt;
+        x = x + d_x * dt;
+        y = y + d_y * dt;
+
+        d_path[x(offset + step)] = x;
+        d_path[y(offset + step)] = y;
     }
-    double alpha_f = std::atan((vy + d_carParams[car].a * r) / safe_vx) - steer;
-    double alpha_r = std::atan((vy - d_carParams[car].b * r) / safe_vx);
-
-    // 2. Normal Forces
-    double g = 9.81;
-    double F_zF = (d_carParams[car].M * g * d_carParams[car].b) / (d_carParams[car].a + d_carParams[car].b);
-    double F_zR = (d_carParams[car].M * g * d_carParams[car].a) / (d_carParams[car].a + d_carParams[car].b);
-
-    // 3. Brush Forces (You will need to re-implement your brush logic here or call a CPU equivalent)
-    // For simplicity, assuming you have a cpu_brush_force function that matches the device one
-    double F_yF = brushForce(alpha_f, F_zF, d_carParams[car].C_f, throttle / 2.0, d_carParams[car].mu);
-    double F_yR = brushForce(alpha_r, F_zR, d_carParams[car].C_r, throttle / 2.0, d_carParams[car].mu);
-
-
-    // 4. Dynamic Equations
-    double d_vx = (throttle - F_yF * std::sin(steer)) / d_carParams[car].M + (r * vy);    
-    double d_vy = (F_yF + F_yR) / d_carParams[car].M - (r * vx);
-    double d_r  = (d_carParams[car].a * F_yF - d_carParams[car].b * F_yR) / d_carParams[car].I_z;
-
-    // 5. Kinematic Equations
-    double d_x   = vx * std::cos(psi) - vy * std::sin(psi);
-    double d_y   = vx * std::sin(psi) + vy * std::cos(psi);
-    double d_psi = r;
-
-    // 6. Euler Integration
-    d_carStates[car].vx  = vx + d_vx * dt;
-    d_carStates[car].vy  = vy + d_vy * dt;
-    d_carStates[car].r   = r + d_r * dt;
-    d_carStates[car].x   = x + d_x * dt;
-    d_carStates[car].y   = y + d_y * dt;
-    d_carStates[car].psi = psi + d_psi * dt;
-
-    d_path[x(idx)] = d_carStates[car].x;
-    d_path[y(idx)] = d_carStates[car].y;
 }
 
 __global__ 
@@ -304,17 +308,19 @@ void kernelRolloutGhosts(
 
 __global__
 void kernelComputeWeights(MPPIDeviceData d_data, int samples, double lambda) {
-    double min_cost = d_data.costs[0];
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int offset = idx * samples;
+    double min_cost = d_data.costs[offset];
     for (int k = 1; k < samples; ++k) {
-        if (d_data.costs[k] < min_cost) {
-            min_cost = d_data.costs[k];
+        if (d_data.costs[offset + k] < min_cost) {
+            min_cost = d_data.costs[offset + k];
         }
     }
 
     double sum = 0.0;
     for (int k = 0; k < samples; ++k) {
-        double w = exp(-(d_data.costs[k] - min_cost) / lambda);
-        d_data.weights[k] = w;
+        double w = exp(-(d_data.costs[offset + k] - min_cost) / lambda);
+        d_data.weights[offset + k] = w;
         sum += w;
     }
     
