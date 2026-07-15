@@ -114,7 +114,7 @@ void CudaMPPI::getPredictedPath() {
 
     int block = 512;
     int grid = (numCars*steps + block - 1) / block;
-    kernelPredictedPath<<<grid, block>>>(numCars, steps, dt, d_data.nominal_steer, d_data.nominal_throttle, d_carStates, d_carParams);
+    kernelPredictedPath<<<grid, block>>>(numCars, steps, dt, d_path, d_data.nominal_steer, d_data.nominal_throttle, d_carStates, d_carParams);
 }
 
 
@@ -163,6 +163,7 @@ CudaMPPI::CudaMPPI(std::map<std::string, double>& params, const std::vector<CarS
     trackWidth = track_data.getTrackWidth();
     totalCars = (int)params["numCars"];
     maxObsCars = (int)params["numCars"] - 1;
+    int steps = params["steps"];
 
     for (const auto &car : setup) {
         fleet.push_back(Car(car.params));
@@ -195,7 +196,7 @@ CudaMPPI::CudaMPPI(std::map<std::string, double>& params, const std::vector<CarS
     cudaMalloc(& d_track, 2*track_bytes);
 
     cudaMemcpy(d_track, temp.data(), 2*track_bytes, cudaMemcpyHostToDevice);
-
+    path.reserve(2*totalCars*steps);
 
     //obstacles
 
@@ -220,11 +221,13 @@ CudaMPPI::CudaMPPI(std::map<std::string, double>& params, const std::vector<CarS
 // allocating the memory on device 
 void CudaMPPI::allocate_device_memory() {
     int numCars = params["numCars"];
+    int samples = params["samples"];
+    int steps = params["steps"];
     std::cout << numCars << std::endl;
-    size_t size_ghost = params["samples"] * sizeof(double); // no of ghost cars
+    size_t size_ghost = samples * sizeof(double); // no of ghost cars
     //size_t size_horizon = params["steps"] * sizeof(double); // horizon 
-    size_t size_horizon_all = totalCars * params["steps"] * sizeof(double);
-    size_t size_noise = numCars*params["samples"] * params["steps"] * sizeof(double);
+    size_t size_horizon_all = totalCars * steps * sizeof(double);
+    size_t size_noise = numCars * samples * steps * sizeof(double);
 
     // states
     cudaMalloc(&d_data.ghost, 2*size_ghost);
@@ -242,16 +245,18 @@ void CudaMPPI::allocate_device_memory() {
     //costs and weights
     cudaMalloc(&d_data.costs, numCars*size_ghost);
     cudaMalloc(&d_data.weights, numCars*size_ghost);
-    cudaMalloc(&d_rng_states, numCars*params["samples"] * sizeof(curandState));
+    cudaMalloc(&d_rng_states, numCars * samples * sizeof(curandState));
+    cudaMalloc(&d_path, 2 * numCars * steps *sizeof(double));
     // cudaMalloc(&d_carParams, numCars*sizeof(CarParams));
 
     //intializing
     cudaMemset(d_data.nominal_steer, 0, size_horizon_all);
     cudaMemset(d_data.nominal_throttle, 0, size_horizon_all);
+    cudaMemset(d_path, 0, 2 * numCars * steps);
 
     //allcoating for the obstacle cars
     if (maxObsCars > 0) {
-        size_t obs_bytes = maxObsCars * params["steps"] * sizeof(double);
+        size_t obs_bytes = maxObsCars * steps * sizeof(double);
         cudaMalloc(&d_data.obs, 2*obs_bytes);
         // cudaMalloc(&d_data.obs_y, obs_bytes);
     }
@@ -268,26 +273,13 @@ void CudaMPPI::allocate_device_memory() {
     cudaMalloc(&d_carStates, numCars*sizeof(CarState));
     cudaMalloc(&d_carParams, numCars*sizeof(CarParams));
 }
-// void CudaMPPI::copyParamsToDevice() {
-//     int numCars = params["numCars"];
-//     std::cout << "d_carParams = " << d_carParams << ", d_carStates = " << d_carStates << std::endl;
-//     std::cout << "carParams.size() = " << carParams.size() << ", carStates.size() = " << carStates.size() << ", numCars = " << numCars << std::endl;
-//     cudaMemcpy(&d_carParams, carParams.data(), numCars * sizeof(CarParams) , cudaMemcpyHostToDevice);
-//     cudaMemcpy(&d_carStates, carStates.data(), numCars * sizeof(CarState), cudaMemcpyHostToDevice);
-// }
 void CudaMPPI::copyParamsToDevice() {
     int numCars = params["numCars"];
-    std::cout << "d_carParams = " << d_carParams << ", d_carStates = " << d_carStates << std::endl;
-    std::cout << "carParams.size() = " << carParams.size() << ", carStates.size() = " << carStates.size() << ", numCars = " << numCars << std::endl;
-
     cudaError_t err1 = cudaMemcpy(d_carParams, carParams.data(), numCars * sizeof(CarParams), cudaMemcpyHostToDevice);
-    std::cout << "carParams memcpy: " << cudaGetErrorString(err1) << std::endl;
-
     cudaError_t err2 = cudaMemcpy(d_carStates, carStates.data(), numCars * sizeof(CarState), cudaMemcpyHostToDevice);
-    std::cout << "carStates memcpy: " << cudaGetErrorString(err2) << std::endl;
 }
 void CudaMPPI::setupCurand() {
-    int threads_per_block = 256;
+    int threads_per_block = 1024;
     int blocks_per_grid = (params["samples"] + threads_per_block - 1) / threads_per_block;
     setup_curand_kernel<<<blocks_per_grid, threads_per_block>>>(d_rng_states, (unsigned long)time(NULL), params["samples"]);
 }
@@ -302,10 +294,10 @@ void CudaMPPI::updateTrajectory() {
 }
 void CudaMPPI::printLog(std::ofstream& file, double time) {
     int numCars = params["numCars"];
-    // std::cout << "carStates.size() = " << carStates.size() << ", control.size() = " << control.size() << ", numCars = " << numCars << std::endl;
-    // std::cout << "d_carStates = " << d_carStates << ", d_control = " << d_control << std::endl;
+    int steps = params["steps"];
     cudaMemcpy(carStates.data(), d_carStates, numCars*sizeof(CarState), cudaMemcpyDeviceToHost);
     cudaMemcpy(control.data(), d_control, numCars*sizeof(ControlInput), cudaMemcpyDeviceToHost);
+    cudaMemcpy(path.data(), d_path, 2*numCars*steps*sizeof(double), cudaMemcpyDeviceToHost);
     
     for (int i = 0; i < numCars; ++i) {
         if (file.is_open()) {
@@ -321,13 +313,13 @@ void CudaMPPI::printLog(std::ofstream& file, double time) {
                     << control[i].steering << " " 
                     << control[i].throttle << " ";
 
-        // Append the predicted path (the optimal tentacle) to the end of the line
-        // for (const auto& pt : predicted_path) {
-        //     file << " " << pt.first << " " << pt.second;   
-        // }
-        
-        // Finally, end the line
-        file << "\n";           
+            // Append the predicted path (the optimal tentacle) to the end of the line
+            for (int j = 0; j < steps; ++j) {
+                file << " " << path[x(i)] << " " << path[y(i)];   
+            }
+            
+            // Finally, end the line
+            file << "\n";           
         }
     }
 }

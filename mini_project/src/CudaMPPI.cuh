@@ -58,7 +58,7 @@ private:
     std::vector<CarParams> carParams;
     std::vector<Car> fleet;
     std::vector<ControlInput> control;
-    // std::vector<std::vector<std::pair<double,double>>> path;
+    std::vector<double> path;
     
     // Device Pointers 
     MPPIDeviceData d_data;
@@ -68,6 +68,7 @@ private:
     ControlInput* d_control;
     // Track data
     double* d_track;
+    double* d_path;
     // double* d_track_y;
     int track_size;
     double trackWidth;

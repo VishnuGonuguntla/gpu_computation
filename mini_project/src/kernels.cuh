@@ -72,7 +72,7 @@ double distanceToSegment(double px, double py, double x1, double y1, double x2, 
 }
 
 __global__
-void kernelPredictedPath(int numCars, int steps, double dt, double* d_steer, double* d_throttle, CarState* d_carStates, CarParams* d_carParams) {
+void kernelPredictedPath(int numCars, int steps, double dt, double* d_path,  double* d_steer, double* d_throttle, CarState* d_carStates, CarParams* d_carParams) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= numCars * steps) return;
     int car = idx / steps;
@@ -124,6 +124,9 @@ void kernelPredictedPath(int numCars, int steps, double dt, double* d_steer, dou
     d_carStates[car].x   = x + d_x * dt;
     d_carStates[car].y   = y + d_y * dt;
     d_carStates[car].psi = psi + d_psi * dt;
+
+    d_path[x(idx)] = d_carStates[car].x;
+    d_path[y(idx)] = d_carStates[car].y;
 }
 
 __global__ 

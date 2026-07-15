@@ -7,14 +7,12 @@
 #include "Track.h"
 #include "Car.h"
 #include "cuda-util.cuh"
-
+#include <chrono>
 int main() {
     IOManager io;
   
     // Load the data
     std::map<std::string, double> params; // = io.load_mppi_config("config.par");
-    // Trackdata trackdata = io.load_track_data("trackData.txt");
-    // SimParams simparams = io.load_sim_config("sim_config.txt");
     Track track;
     parseTrackData("trackData.txt", track);
     parseParameter("config.par", params);
@@ -53,6 +51,7 @@ int main() {
     // Open the telemetry file
     std::ofstream telemetry_file = io.init_telemetry("telemetry.txt");
     std::cout << "Starting race loop (" << total_steps << " steps)..." << std::endl;
+    auto startCompute = std::chrono::steady_clock::now();
 
     // Main loop
     for (int i = 0; i <= total_steps; ++i) {
@@ -70,8 +69,12 @@ int main() {
         // Step C: Log  the detail for simulation
         mppi.printLog(telemetry_file, current_time);
         // Print on terminal
-        if (i % 100 == 0)
-            std::cout << "Simulated " << current_time << " seconds..." << std::endl;
+        if (i % 100 == 0) {
+            std::cout << "Simulated " << current_time << " seconds... ";
+            auto endCompute = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsedSeconds = endCompute - startCompute;
+            std::cout << "Simulation Time: " << elapsedSeconds.count() << std::endl;
+        }
     }
     
     telemetry_file.close();
