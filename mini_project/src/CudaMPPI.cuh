@@ -16,12 +16,10 @@
 // device
 struct MPPIDeviceData {
     //states
-    double* ghost;
-    // double* ghost_y;
-    double* ghost_psi;
-    double* ghost_v;
-    // double* ghost_vy;
-    double* ghost_r;
+    // double* ghost;
+    // double* ghost_psi;
+    // double* ghost_v;
+    // double* ghost_r;
     
     double* costs;      
     
@@ -30,14 +28,10 @@ struct MPPIDeviceData {
 
     // for other cars or dynamic obstacles 
     double* obs;
-    // double* obs_y;
 
 
     //for static obstacles
     double* static_obs;
-    // double* static_obs_y;
-    // double* static_obs_radius;
-
 
     //for storing the noise  
     double* noise_throttle;
@@ -46,7 +40,6 @@ struct MPPIDeviceData {
     //storing weights 
     double* weights;
     double* sum_weights;
-
 };
 
 
@@ -77,10 +70,6 @@ private:
     int maxObsCars;
     double targetSpeed;
     int numStaticObs;
-
-    // Helper functions 
-    
-    // void init_curand();
 
 public:
     // Constructor: Takes existing parameters and sets up the GPU

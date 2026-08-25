@@ -44,3 +44,6 @@
 .clangd
 mppi-cuda
 run.sh
+**/data
+**/*.nsys-rep
+**/*.sqlite

@@ -22,39 +22,18 @@ void CudaMPPI::getBestControl(){
     int lambda = params["lambda"];
 
     //allocating the memory for the normaina trajectories of other cars
-    std::vector<double> flat_obs(2*num_obs_cars * steps);
-    // std::vector<double> flat_obs_y(num_obs_cars * horizon);
-
-    //looping unrolling
-    int flat_index = 0 ;
-
-    // for(int i = 0; i < numCars; ++i){
-    //     if(0 == i) continue;
-    //     for(int t = 0; t<steps; ++t){
-    //         flat_obs[x(flat_index)] = path[i][t].first;
-    //         flat_obs[y(flat_index)] = path[i][t].second;
-    //         flat_index += 1;
-    //     }
-    // }
-
-    // size_t obs_bytes = num_obs_cars * steps * sizeof(double);
-    // cudaMemcpy(d_data.obs, flat_obs.data(), 2*obs_bytes, cudaMemcpyHostToDevice);
-    // cudaMemcpy(d_data.obs_y, flat_obs_y.data(), obs_bytes, cudaMemcpyHostToDevice);
-
-
-    //kernel launch
+    // std::vector<double> flat_obs(2*num_obs_cars * steps);
+    // // std::vector<double> flat_obs_y(num_obs_cars * horizon);
 
     int block = 512;
     int grid = (numCars*samples + block - 1) / block;
 
     kernelRolloutGhosts<<<grid, block>>>(
-        d_data, numCars,       // All VRAM pointers 
-        dt, (int)samples,
+        d_data, numCars, dt, (int)samples,
         (int)params["steps"], d_carParams,
         targetSpeed, d_rng_states, d_carStates,
         params["std_steer"], params["std_throttle"],
         d_track,       // Static track waypoints
-        // d_track_y,       // Static track waypoints
         track_size,      // Track length
         trackWidth,     // Track width
         num_obs_cars,    // other cars
@@ -75,9 +54,7 @@ void CudaMPPI::getBestControl(){
 
 // Helper function for CPU
 inline double cpu_sign(double x) {
-    if (x > 0.0) return 1.0;
-    if (x < 0.0) return -1.0;
-    return 0.0;
+    return x > 0 ? 1.0: -1.0;
 }
 
 // CPU version of the brush tire model
@@ -184,31 +161,26 @@ void CudaMPPI::allocate_device_memory() {
     int numCars = params["numCars"];
     int samples = params["samples"];
     int steps = params["steps"];
-    std::cout << numCars << std::endl;
     size_t size_ghost = samples * sizeof(double); // no of ghost cars
     //size_t size_horizon = params["steps"] * sizeof(double); // horizon 
     size_t size_horizon_all = totalCars * steps * sizeof(double);
     size_t size_noise = numCars * samples * steps * sizeof(double);
 
     // states
-    cudaMalloc(&d_data.ghost, 2*size_ghost);
-    // cudaMalloc(& d_data.ghost_y, size_ghost);
-    cudaMalloc(&d_data.ghost_v, 2*size_ghost);
-    // cudaMalloc(& d_data.ghost_vy, size_ghost);
-    cudaMalloc(&d_data.ghost_psi, size_ghost);
-    cudaMalloc(&d_data.ghost_r, size_ghost);
+    // cudaMalloc(&d_data.ghost, 2*size_ghost);
+    // cudaMalloc(&d_data.ghost_v, 2*size_ghost);
+    // cudaMalloc(&d_data.ghost_psi, size_ghost);
+    // cudaMalloc(&d_data.ghost_r, size_ghost);
 
     //nomianl trajectories
     cudaMalloc(&d_data.nominal_steer, size_horizon_all);
     cudaMalloc(&d_data.nominal_throttle, size_horizon_all);
     
-
     //costs and weights
     cudaMalloc(&d_data.costs, numCars*size_ghost);
     cudaMalloc(&d_data.weights, numCars*size_ghost);
     cudaMalloc(&d_rng_states, numCars * samples * sizeof(curandState));
     cudaMalloc(&d_path, 2 * numCars * steps *sizeof(double));
-    // cudaMalloc(&d_carParams, numCars*sizeof(CarParams));
 
     //intializing
     cudaMemset(d_data.nominal_steer, 0, size_horizon_all);
@@ -219,7 +191,6 @@ void CudaMPPI::allocate_device_memory() {
     if (maxObsCars > 0) {
         size_t obs_bytes = maxObsCars * steps * sizeof(double);
         cudaMalloc(&d_data.obs, 2*obs_bytes);
-        // cudaMalloc(&d_data.obs_y, obs_bytes);
     }
 
     //noise 
@@ -228,17 +199,19 @@ void CudaMPPI::allocate_device_memory() {
 
     // weights 
     // cudaMalloc(&d_data.weights, size_ghost);
-    cudaMalloc(&d_data.sum_weights, 1*sizeof(double));
+    cudaMalloc(&d_data.sum_weights, numCars*sizeof(double));
     cudaMalloc(&d_control, numCars*sizeof(ControlInput));
 
     cudaMalloc(&d_carStates, numCars*sizeof(CarState));
     cudaMalloc(&d_carParams, numCars*sizeof(CarParams));
 }
+
 void CudaMPPI::copyParamsToDevice() {
     int numCars = params["numCars"];
     cudaError_t err1 = cudaMemcpy(d_carParams, carParams.data(), numCars * sizeof(CarParams), cudaMemcpyHostToDevice);
     cudaError_t err2 = cudaMemcpy(d_carStates, carStates.data(), numCars * sizeof(CarState), cudaMemcpyHostToDevice);
 }
+
 void CudaMPPI::setupCurand() {
     int numCars = params["numCars"];
     int threads_per_block = 1024;
@@ -252,8 +225,8 @@ void CudaMPPI::updateTrajectory() {
     int block = 512;
     int grid = (numCars + block - 1)/block;
     kernelUpdateCarPosition<<<grid, block>>>(d_carStates, d_carParams, d_control, numCars, dt, 9.81);
-
 }
+
 void CudaMPPI::printLog(std::ofstream& file, double time) {
     int numCars = params["numCars"];
     int steps = params["steps"];
@@ -303,10 +276,10 @@ CudaMPPI::~CudaMPPI() {
     }
 
     // Free Ghost Car States
-    cudaFree(d_data.ghost);
-    cudaFree(d_data.ghost_v);
-    cudaFree(d_data.ghost_psi);
-    cudaFree(d_data.ghost_r);
+    // cudaFree(d_data.ghost);
+    // cudaFree(d_data.ghost_v);
+    // cudaFree(d_data.ghost_psi);
+    // cudaFree(d_data.ghost_r);
 
     // Free Nominal Trajectories & Noise Matrices
     cudaFree(d_data.nominal_steer);

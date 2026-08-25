@@ -27,9 +27,8 @@ double slipAngle(double v_x, double v_y, double r, double steer, bool is_front, 
     } else {
         return atanf((v_y - b * r) / safe_vx);
     }
-    
-
 }
+
 //brush tire model
 __device__ 
 double brushForce(double alpha, double F_z, double C, double u_F, double mu) {
@@ -85,6 +84,13 @@ void kernelPredictedPath(int numCars, int steps, double dt, double* d_path,  dou
     double vx = d_carStates[car].vx;
     double vy = d_carStates[car].vy;
     double r = d_carStates[car].r;
+    double a = d_carParams[car].a;
+    double b = d_carParams[car].b;
+    double M = d_carParams[car].M;
+    double C_f = d_carParams[car].C_f;
+    double C_r = d_carParams[car].C_r;
+    double mu = d_carParams[car].mu;
+    double I_z = d_carParams[car].I_z;
     for (int step = 0; step < steps; ++step) {
         double steer = d_steer[offset + step];
         double throttle = d_throttle[offset + step];
@@ -94,24 +100,24 @@ void kernelPredictedPath(int numCars, int steps, double dt, double* d_path,  dou
         if (std::fabs(safe_vx) < 0.01) {
             safe_vx = (safe_vx >= 0.0) ? 0.01 : -0.01;
         }
-        double alpha_f = std::atan((vy + d_carParams[car].a * r) / safe_vx) - steer;
-        double alpha_r = std::atan((vy - d_carParams[car].b * r) / safe_vx);
+        double alpha_f = std::atan((vy + a * r) / safe_vx) - steer;
+        double alpha_r = std::atan((vy - b * r) / safe_vx);
 
         // 2. Normal Forces
         double g = 9.81;
-        double F_zF = (d_carParams[car].M * g * d_carParams[car].b) / (d_carParams[car].a + d_carParams[car].b);
-        double F_zR = (d_carParams[car].M * g * d_carParams[car].a) / (d_carParams[car].a + d_carParams[car].b);
+        double F_zF = (M * g * b) / (a + b);
+        double F_zR = (M * g * a) / (a + b);
 
         // 3. Brush Forces (You will need to re-implement your brush logic here or call a CPU equivalent)
         // For simplicity, assuming you have a cpu_brush_force function that matches the device one
-        double F_yF = brushForce(alpha_f, F_zF, d_carParams[car].C_f, throttle / 2.0, d_carParams[car].mu);
-        double F_yR = brushForce(alpha_r, F_zR, d_carParams[car].C_r, throttle / 2.0, d_carParams[car].mu);
+        double F_yF = brushForce(alpha_f, F_zF, C_f, throttle / 2.0,mu);
+        double F_yR = brushForce(alpha_r, F_zR, C_r, throttle / 2.0,mu);
 
 
         // 4. Dynamic Equations
-        double d_vx = (throttle - F_yF * std::sin(steer)) / d_carParams[car].M + (r * vy);    
-        double d_vy = (F_yF + F_yR) / d_carParams[car].M - (r * vx);
-        double d_r  = (d_carParams[car].a * F_yF - d_carParams[car].b * F_yR) / d_carParams[car].I_z;
+        double d_vx = (throttle - F_yF * std::sin(steer)) / M + (r * vy);    
+        double d_vy = (F_yF + F_yR) / M - (r * vx);
+        double d_r  = (a * F_yF - b * F_yR) / I_z;
 
         // 5. Kinematic Equations
         double d_x   = vx * std::cos(psi) - vy * std::sin(psi);
@@ -164,16 +170,14 @@ void kernelRolloutGhosts(
     double vx =  d_carStates[car].vx;
     double vy =  d_carStates[car].vy;
     double r =   d_carStates[car].r;
-    double M = d_carParams[car].M;
-    double a = d_carParams[car].a;
-    double b = d_carParams[car].b;
+    double M =   d_carParams[car].M;
+    double a =   d_carParams[car].a;
+    double b =   d_carParams[car].b;
     double C_f = d_carParams[car].C_f;
     double C_r = d_carParams[car].C_r;
     double I_z = d_carParams[car].I_z;
-    double mu = d_carParams[car].mu;
+    double mu =  d_carParams[car].mu;
     
-    
-
     double total_cost = 0.0;
 
     int offset = car * steps;
@@ -324,7 +328,7 @@ void kernelComputeWeights(MPPIDeviceData d_data, int samples, double lambda) {
         sum += w;
     }
     
-    d_data.sum_weights[0] = sum;
+    d_data.sum_weights[idx] = sum;
 }
 
 __global__
