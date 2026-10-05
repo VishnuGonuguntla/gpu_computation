@@ -1,9 +1,6 @@
 #pragma once
+#include "types.h"
 #include <vector>
-#include <cmath>
-#include <algorithm>
-#include <limits>
-
 
 struct Point2D {
     double x;
@@ -18,31 +15,32 @@ struct Obstacle {
 
 class Track {
 private:
-    std::vector<Point2D> centerLine;  // The list of waypoints forming the track
-    std::vector<Obstacle> obstacles;   // The list of static obstacles
-    double trackWidth;                 // The total width of the drivable track
+    std::vector<Point2D> centerLine;
+    std::vector<Obstacle> obstacles;
+    double trackWidth = 0.0;
+    std::vector<double> packed_xy;
+    std::vector<double> packed_obs;
 
-    // Finds the shortest distance from a point to a line segment
-    double distance_to_segment(Point2D p, Point2D a, Point2D b);
+    void rebuild_packed();
 
 public:
-    // Constructor
     Track() = default;
-    Track(double width);
+    explicit Track(double width);
 
-    // Setup functions to build the environment
-    //void add_waypoint(double x, double y);
-    void add_waypoints(const std::vector<Point2D> &waypoints);
-    void add_obstacles(const std::vector<Obstacle> &obstacles);
-    const std::vector<Point2D>& getCenterLine() const { return centerLine; }
-    const double getTrackWidth() { return trackWidth; }
-    // Returns the penalty cost for a given X/Y position
-    double get_position_cost(double car_x, double car_y);
-    std::vector<Point2D>& getPoint2D() { return centerLine;}
-    std::vector<Obstacle>& getObstacles() { return obstacles;}
-
+    void add_waypoints(const std::vector<Point2D>& waypoints);
+    void add_obstacles(const std::vector<Obstacle>& obstacles);
+    void addWaypoint(Point2D p);
+    void addObstacle(Obstacle o);
     void setTrackWidth(double w) { trackWidth = w; }
-    void addWaypoint(Point2D p) { centerLine.push_back(p); }
-    void addObstacle(Obstacle o) { obstacles.push_back(o); }
-};
 
+    const std::vector<Point2D>& getCenterLine() const { return centerLine; }
+    const std::vector<Obstacle>& getObstacles() const { return obstacles; }
+    double getTrackWidth() const { return trackWidth; }
+
+    const double* packedCenterline() const { return packed_xy.data(); }
+    int centerlineSize() const { return static_cast<int>(centerLine.size()); }
+    const double* packedObstacles() const { return packed_obs.empty() ? nullptr : packed_obs.data(); }
+    int obstacleCount() const { return static_cast<int>(obstacles.size()); }
+
+    double get_position_cost(double car_x, double car_y, const CostParams& cost) const;
+};

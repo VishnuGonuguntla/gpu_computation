@@ -1,92 +1,60 @@
 #pragma once
-#include "Car.h"
+#include "IOManager.h"
 #include "Track.h"
-#include "MPPI.h" 
-// #include "IOManager.h"
+#include "types.h"
 #include <curand_kernel.h>
-#include <ctime>
-#include <map>
-#include <iostream>
-#include <vector>
-#include <iomanip>
 #include <fstream>
-#define x(i) (2*(i)+0)
-#define y(i) (2*(i)+1)
+#include <vector>
 
-// device
 struct MPPIDeviceData {
-    //states
-    // double* ghost;
-    // double* ghost_psi;
-    // double* ghost_v;
-    // double* ghost_r;
-    
-    double* costs;      
-    
-    double* nominal_steer;   
-    double* nominal_throttle;
-
-    // for other cars or dynamic obstacles 
-    double* obs;
-
-
-    //for static obstacles
-    double* static_obs;
-
-    //for storing the noise  
-    double* noise_throttle;
-    double* noise_steer;
-
-    //storing weights 
-    double* weights;
-    double* sum_weights;
+    double* costs = nullptr;
+    double* weights = nullptr;
+    double* sum_weights = nullptr;
+    double* nominal_steer = nullptr;
+    double* nominal_throttle = nullptr;
+    double* noise_steer = nullptr;
+    double* noise_throttle = nullptr;
+    double* path = nullptr;
+    double* track = nullptr;
+    double* static_obs = nullptr;
+    double* target_speed = nullptr;
+    CarParams* car_params = nullptr;
+    CarState* car_states = nullptr;
+    ControlInput* control = nullptr;
+    curandState* rng = nullptr;
 };
 
-
 class CudaMPPI {
-private:
-    std::map<std::string, double> params;
-    CarParams vehicle_params;
-    std::vector<CarState> carStates;
-    std::vector<CarParams> carParams;
-    std::vector<Car> fleet;
-    std::vector<ControlInput> control;
-    std::vector<double> path;
-    
-    // Device Pointers 
-    MPPIDeviceData d_data;
-    curandState* d_rng_states;
-    CarParams* d_carParams;
-    CarState* d_carStates;
-    ControlInput* d_control;
-    // Track data
-    double* d_track;
-    double* d_path;
-    // double* d_track_y;
-    int track_size;
-    double trackWidth;
-
-    int totalCars;
-    int maxObsCars;
-    double targetSpeed;
-    int numStaticObs;
-
 public:
-    // Constructor: Takes existing parameters and sets up the GPU
-    CudaMPPI(std::map<std::string, double>& params, const std::vector<CarSetup>& setup, Track& track_data);
-
-    
-    // Destructor
+    CudaMPPI(const AppConfig& cfg, const std::vector<CarSetup>& setup, const Track& track);
     ~CudaMPPI();
 
-    void getBestControl();
-                                  
-    void getPredictedPath();
-    void setupCurand();
-    void allocate_device_memory();
-    void copyParamsToDevice();
-    void updateTrajectory();
-    void printLog(std::ofstream& file, double time);
+    CudaMPPI(const CudaMPPI&) = delete;
+    CudaMPPI& operator=(const CudaMPPI&) = delete;
 
-    void free_device_memory();
+    void iterate();
+    void log(std::ofstream& file, double time);
+
+    int car_count() const { return num_cars; }
+
+private:
+    void allocate();
+    void predicted_path();
+    void rollout();
+    void compute_weights();
+    void update_trajectory();
+    void extract_control_and_shift();
+    void step_cars();
+
+    AppConfig cfg;
+    MPPIDeviceData d{};
+    int num_cars = 0;
+    int track_size = 0;
+    int num_static_obs = 0;
+    double track_width = 0.0;
+
+    std::vector<CarState> h_states;
+    std::vector<ControlInput> h_control;
+    std::vector<double> h_path;
+    IOManager io;
 };

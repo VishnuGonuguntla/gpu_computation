@@ -1,11 +1,12 @@
-#include "CudaMPPI.cuh"
+#include "Car.h"
 #include "IOManager.h"
+#include "MPPI.h"
 #include "Track.h"
-#include "types.h"
 
 #include <chrono>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 int main(int argc, char** argv) {
@@ -30,20 +31,48 @@ int main(int argc, char** argv) {
         setups.resize(num_cars);
     }
 
-    CudaMPPI mppi(cfg, setups, track);
+    std::vector<Car> fleet;
+    std::vector<CarState> states;
+    std::vector<MPPI> brains;
+    fleet.reserve(num_cars);
+    states.reserve(num_cars);
+    brains.reserve(num_cars);
+    for (int c = 0; c < num_cars; ++c) {
+        fleet.emplace_back(setups[c].params);
+        states.push_back(setups[c].initial_state);
+        brains.emplace_back(cfg.mppi, cfg.cost, setups[c].target_speed);
+    }
+
     std::ofstream telemetry = io.init_telemetry(telem_path);
-    io.write_run_info("run_info.txt", "cuda", cfg, setups, track);
+    io.write_run_info("run_info.txt", "serial", cfg, setups, track);
 
     const double dt = cfg.mppi.dt;
     const int total_steps = static_cast<int>(cfg.sim.total_time / dt);
-    std::cout << "CUDA MPPI: " << num_cars << " cars, " << cfg.mppi.samples
+    std::cout << "Serial MPPI: " << num_cars << " cars, " << cfg.mppi.samples
               << " samples, horizon " << cfg.mppi.steps << ", " << total_steps << " steps\n";
 
     auto t0 = std::chrono::steady_clock::now();
     for (int i = 0; i <= total_steps; ++i) {
         const double time = i * dt;
-        mppi.iterate();
-        mppi.log(telemetry, time);
+
+        std::vector<std::vector<std::pair<double, double>>> paths(num_cars);
+        for (int c = 0; c < num_cars; ++c) {
+            paths[c] = brains[c].predicted_path(states[c], fleet[c]);
+        }
+
+        std::vector<ControlInput> controls(num_cars);
+        for (int c = 0; c < num_cars; ++c) {
+            controls[c] = brains[c].compute(states[c], fleet[c], track, paths, c);
+        }
+
+        for (int c = 0; c < num_cars; ++c) {
+            paths[c] = brains[c].predicted_path(states[c], fleet[c]);
+            states[c] = fleet[c].step(states[c], controls[c].steering, controls[c].throttle, dt);
+            brains[c].shift();
+            io.log_step(telemetry, time, c, states[c],
+                        controls[c].steering, controls[c].throttle, paths[c]);
+        }
+
         if (i % 50 == 0) {
             auto t1 = std::chrono::steady_clock::now();
             std::chrono::duration<double> elapsed = t1 - t0;

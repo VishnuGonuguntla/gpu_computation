@@ -1,146 +1,115 @@
 #include "MPPI.h"
+#include "cost.h"
+#include "dynamics.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
-//constuructor
-MPPI::MPPI(const MPPIParams &params){ 
-    num_samples = params.samples;
-    horizon = params.steps; 
-    dt = params.lambda;
-    
-    // Hyperparameters
-    lambda = params.dt;
-    noise_std_steer =   params.std_steer;  // 0.6 radians of random steering
-    noise_std_throttle = params.std_throttle; // 1000 Newtons of random throttle
+MPPI::MPPI(const MPPIParams& mppi_params, const CostParams& costs, double speed)
+    : params(mppi_params),
+      cost_params(costs),
+      target_speed(speed),
+      nominal(mppi_params.steps, ControlInput{0.0, 0.0}),
+      rng(std::random_device{}()),
+      steer_dist(0.0, mppi_params.std_steer),
+      throttle_dist(0.0, mppi_params.std_throttle) {}
 
-    // Iintialize with zeroes
-    nominal_trajectory.resize(horizon, {0.0, 0.0});
+ControlInput MPPI::compute(const CarState& current_state, const Car& car_model, const Track& track,
+                           const std::vector<std::vector<std::pair<double, double>>>& other_paths,
+                           int my_car_id) {
+    const int M = params.samples;
+    const int T = params.steps;
+    const double dt = params.dt;
+    const double lambda = (params.lambda > 0.0) ? params.lambda : 1.0;
 
-    // Setup the random number generator
-    std::random_device rd;
-    rng = std::mt19937(rd());
-    steer_dist = std::normal_distribution<double>(0.0, noise_std_steer);
-    throttle_dist = std::normal_distribution<double>(0.0, noise_std_throttle);
-}
+    std::vector<double> trajectory_costs(M, 0.0);
+    std::vector<std::vector<ControlInput>> noises(M, std::vector<ControlInput>(T));
 
-ControlInput MPPI::get_best_control(const CarState& current_state, Car& car_model, Track& track, const std::vector<std::vector<std::pair<double, double>>>& other_paths, int mycar_id) {
-    
-    std::vector<double> trajectory_costs(num_samples, 0.0);
-    
-    // 2d spread sheet 
-    std::vector<std::vector<ControlInput>> random_noises(num_samples, std::vector<ControlInput>(horizon));
+    const double* track_xy = track.packedCenterline();
+    const int track_size = track.centerlineSize();
+    const double track_width = track.getTrackWidth();
+    const double* static_obs = track.packedObstacles();
+    const int n_obs = track.obstacleCount();
+    const int num_cars = static_cast<int>(other_paths.size());
 
+    // Flatten predicted paths to the same layout the CUDA kernels use.
+    std::vector<double> packed_paths(static_cast<size_t>(num_cars) * T * 2, 0.0);
+    for (int c = 0; c < num_cars; ++c) {
+        const int n = std::min(T, static_cast<int>(other_paths[c].size()));
+        for (int t = 0; t < n; ++t) {
+            packed_paths[path_index(c, t, T)] = other_paths[c][t].first;
+            packed_paths[path_index(c, t, T) + 1] = other_paths[c][t].second;
+        }
+    }
 
-    // ghost cars
-    for (int k = 0; k < num_samples; ++k) {
-        
-        CarState ghost_state = current_state; // Clone the actual car
-        double ghost_cost = 0.0;
-	
-        for (int t = 0; t < horizon; ++t) {
-            // Generate random noise for this specific step
+    for (int k = 0; k < M; ++k) {
+        CarState ghost = current_state;
+        double J = 0.0;
+        for (int t = 0; t < T; ++t) {
             double n_steer = steer_dist(rng);
             double n_throttle = throttle_dist(rng);
-            
-            // we can use it in the math later
-            random_noises[k][t] = {n_steer, n_throttle};
+            noises[k][t] = {n_steer, n_throttle};
 
-            // Apply the nominal plan + the random noise
-            double u_steer = nominal_trajectory[t].steering + n_steer;
-            double u_throttle = nominal_trajectory[t].throttle + n_throttle;
+            double u_steer = nominal[t].steering + n_steer;
+            double u_throttle = nominal[t].throttle + n_throttle;
+            dynamics::clamp_control(u_steer, u_throttle, params.max_steer, params.max_throttle);
 
-            // calulating the dynamics!
-            ghost_state = car_model.stepDynamics(ghost_state, u_steer, u_throttle, dt);
-
-            //swarm collison check
-            for (int other_id = 0; other_id < other_paths.size(); ++other_id) {
-                if (other_id == mycar_id) continue; 
-
-                double other_x = other_paths[other_id][t].first;
-                double other_y = other_paths[other_id][t].second;
-                
-                // Calculate Euclidean distance between our ghost and the other car's future plan
-                double dist = std::hypot(ghost_state.x - other_x, ghost_state.y - other_y);
-                
-                // The Safety Bubble
-                if (dist < 2.5) {
-                    ghost_cost += 1000000.0; 
-                }  
-            }
-
-            // calcualting the cost!
-            ghost_cost += track.get_position_cost(ghost_state.x, ghost_state.y);
-
-            // adding penalty if it is driving too slow
-            ghost_cost += 10000.0 * std::pow((target_speed - ghost_state.vx), 2);
-
-            // change or add vy into this penalyty  and reqrd for maintian gthe speed 
-
-            // The Actuation Penalty (Smoothness)	
-            ghost_cost += 10.0 * (u_steer * u_steer);
-
-            // for flooring the gas pedal unnecessarily
-            ghost_cost += 0.01 * (u_throttle * u_throttle);
+            ghost = dynamics::step(ghost, car_model.params(), u_steer, u_throttle, dt);
+            J += cost::running_cost(ghost, u_steer, u_throttle, target_speed,
+                                    track_xy, track_size, track_width,
+                                    static_obs, n_obs,
+                                    packed_paths.data(), num_cars, my_car_id, t, T,
+                                    cost_params);
         }
-        // rewarding for moving forward 
-        double distance_traveled = std::hypot(ghost_state.x - current_state.x, ghost_state.y - current_state.y);
-        ghost_cost -= 500.0 * distance_traveled;
-        trajectory_costs[k] = ghost_cost;
-
+        J += cost::terminal_cost(ghost, current_state, cost_params);
+        trajectory_costs[k] = J;
     }
-	
-    // finding the minimum cost among the ghost cars - algo 2
 
-    // extracting the min cost - in a fancy way!!!!
-    double min_cost = *std::min_element(trajectory_costs.begin(), trajectory_costs.end());	
-    	
-    double total_weight = 0.0;
-    std::vector<double> weights(num_samples, 0.0);	
-
-    for (int k = 0; k < num_samples; ++k) {
-        // Equation: weight = exp( -(cost - min_cost) / lambda )
-        weights[k] = std::exp(-(trajectory_costs[k] - min_cost) / lambda);
-        total_weight += weights[k];
+    double rho = *std::min_element(trajectory_costs.begin(), trajectory_costs.end());
+    std::vector<double> weights(M, 0.0);
+    double eta = 0.0;
+    for (int k = 0; k < M; ++k) {
+        weights[k] = std::exp(-(trajectory_costs[k] - rho) / lambda);
+        eta += weights[k];
     }
-	
-    // Update the nominal trajectory using the weighted average of the noise
-    for (int t = 0; t < horizon; ++t) {
-        double weighted_steer_noise = 0.0;
-        double weighted_throttle_noise = 0.0;
+    if (eta < 1e-300) eta = 1.0;
 
-        for (int k = 0; k < num_samples; ++k) {
-            weighted_steer_noise += weights[k] * random_noises[k][t].steering;
-            weighted_throttle_noise += weights[k] * random_noises[k][t].throttle;
+    for (int t = 0; t < T; ++t) {
+        double w_steer = 0.0;
+        double w_throttle = 0.0;
+        for (int k = 0; k < M; ++k) {
+            w_steer += weights[k] * noises[k][t].steering;
+            w_throttle += weights[k] * noises[k][t].throttle;
         }
-
-        nominal_trajectory[t].steering += (weighted_steer_noise / total_weight);
-        nominal_trajectory[t].throttle += (weighted_throttle_noise / total_weight);
-
+        nominal[t].steering += w_steer / eta;
+        nominal[t].throttle += w_throttle / eta;
+        dynamics::clamp_control(nominal[t].steering, nominal[t].throttle,
+                                params.max_steer, params.max_throttle);
     }
 
-    ControlInput best_action_now = nominal_trajectory[0]; // even thought we have simulated for 50 steps we ar etaking action only for the next step  becasue later env changes 
-
-    // "Warm Start": Shift the memory forward by 1 step for the next loop - just the using the caluation form previous time step instead of staerting from zero!!!
-    for (int t = 0; t < horizon - 1; ++t) {
-        nominal_trajectory[t] = nominal_trajectory[t + 1];
-    }
-    // last step to zero so we don't carry garbage data
-    nominal_trajectory[horizon - 1] = {0.0, 0.0};
-
-    return best_action_now;
+    return nominal[0];
 }
 
-// for drawing the tentacle
-std::vector<std::pair<double, double>> MPPI::get_predicted_path(const CarState& current_state, Car& car_model) {
+std::vector<std::pair<double, double>> MPPI::predicted_path(const CarState& current_state,
+                                                            const Car& car_model) const {
     std::vector<std::pair<double, double>> path;
-    CarState sim_state = current_state;
-    
-    for (int t = 0; t < horizon; ++t) {
-        sim_state = car_model.stepDynamics(sim_state, nominal_trajectory[t].steering, nominal_trajectory[t].throttle, dt);
-        path.push_back({sim_state.x, sim_state.y});
+    path.reserve(params.steps);
+    CarState sim = current_state;
+    for (int t = 0; t < params.steps; ++t) {
+        double steer = nominal[t].steering;
+        double throttle = nominal[t].throttle;
+        dynamics::clamp_control(steer, throttle, params.max_steer, params.max_throttle);
+        sim = dynamics::step(sim, car_model.params(), steer, throttle, params.dt);
+        path.emplace_back(sim.x, sim.y);
     }
-    
     return path;
 }
 
-void MPPI::set_target_speed(const double speed){
-    target_speed = speed;
+void MPPI::shift() {
+    for (int t = 0; t < params.steps - 1; ++t) {
+        nominal[t] = nominal[t + 1];
+    }
+    if (!nominal.empty()) {
+        nominal.back() = {0.0, 0.0};
+    }
 }

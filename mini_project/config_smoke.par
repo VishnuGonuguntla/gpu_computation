@@ -1,18 +1,14 @@
-# MPPI Configuration (Algorithm 1, arXiv:2409.07563)
-samples 512
-steps 50
+# Short run for compile/algorithm smoke tests
+samples 64
+steps 20
 dt 0.02
 lambda 1.0
 std_steer 0.5
 std_throttle 800
 max_steer 0.8
 max_throttle 10000
-
-# Simulation
-totalTime 15
-numCars 9
-
-# Cost weights (shared by serial and CUDA)
+totalTime 1.0
+numCars 2
 cost_offtrack 100000000
 cost_obstacle 100000000
 cost_collision 1000000

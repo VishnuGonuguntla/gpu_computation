@@ -1,81 +1,46 @@
-/** 
- * This class defines the physical boundaries and obstacles of the race track.
- * Instead of using a 2D image matrix (Cost Map), this track is defined mathematically
- using sequential center-line waypoints and circular static obstacles.
- */
-
 #include "Track.h"
+#include "cost.h"
 
-// constructor
-Track::Track(double width) {
-    trackWidth = width;
-}
+Track::Track(double width) : trackWidth(width) {}
 
-
-void Track::add_waypoints(const std::vector<Point2D> &waypoints){
-    for (const auto &way: waypoints){
-        centerLine.push_back({way.x, way.y});
+void Track::rebuild_packed() {
+    packed_xy.resize(centerLine.size() * 2);
+    for (size_t i = 0; i < centerLine.size(); ++i) {
+        packed_xy[2 * i] = centerLine[i].x;
+        packed_xy[2 * i + 1] = centerLine[i].y;
     }
-    
-}
-
-
-void Track::add_obstacles(const std::vector<Obstacle> &obst){
-    for (const auto &obs : obst){
-        obstacles.push_back({obs.x, obs.y, obs.radius});
+    packed_obs.resize(obstacles.size() * 3);
+    for (size_t i = 0; i < obstacles.size(); ++i) {
+        packed_obs[3 * i] = obstacles[i].x;
+        packed_obs[3 * i + 1] = obstacles[i].y;
+        packed_obs[3 * i + 2] = obstacles[i].radius;
     }
 }
 
-// Vector math to find the shortest distance from point P to line segment AB
-double Track::distance_to_segment(Point2D p, Point2D a, Point2D b) {
-    double l2 = (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y);
-
-    // jsut making sure that we are not dividing by zero
-    if (l2 == 0.0) return std::hypot(p.x - a.x, p.y - a.y); // if A and B are the same point
-
-    // The projection of point P onto the line AB, clamped to the segment [0, 1]
-    double t = std::max(0.0, std::min(1.0, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2));
-    
-    Point2D projection = { a.x + t * (b.x - a.x), a.y + t * (b.y - a.y) };
-    return std::hypot(p.x - projection.x, p.y - projection.y);
+void Track::add_waypoints(const std::vector<Point2D>& waypoints) {
+    centerLine.insert(centerLine.end(), waypoints.begin(), waypoints.end());
+    rebuild_packed();
 }
 
-// Calculates the penalty score for being at (car_x, car_y)
-double Track::get_position_cost(double car_x, double car_y) {
-    double total_cost = 0.0;
-    Point2D car_pos = {car_x, car_y};
+void Track::add_obstacles(const std::vector<Obstacle>& obst) {
+    obstacles.insert(obstacles.end(), obst.begin(), obst.end());
+    rebuild_packed();
+}
 
-    // 1. Check Track Boundaries
-    if (centerLine.size() >= 2) {
-        double min_dist = std::numeric_limits<double>::max(); // infinity
-        
-        // Loop through all segments to find the closest one // this has complexity of O(N) need to reduce this 
-        for (size_t i = 0; i < centerLine.size() - 1; ++i) {
-            double dist = distance_to_segment(car_pos, centerLine[i], centerLine[i+1]);
-            if (dist < min_dist){
-                min_dist = dist;
-            }
-        }
-        
-        // Close the loop (connect last point to first point)
-        double loop_dist = distance_to_segment(car_pos, centerLine.back(), centerLine.front());
-        if (loop_dist < min_dist) min_dist = loop_dist;
+void Track::addWaypoint(Point2D p) {
+    centerLine.push_back(p);
+    rebuild_packed();
+}
 
-        // If the car is further from the center than half the track width, it crashed!
-        if (min_dist > (trackWidth / 2.0)+0.25) {
-            total_cost += 100000000.0; // Massive penalty for driving off-track
-        }
-    }
+void Track::addObstacle(Obstacle o) {
+    obstacles.push_back(o);
+    rebuild_packed();
+}
 
-    // 2. Check Static Obstacles
-    for (const auto& obs : obstacles) {
-        double dist_to_obs = std::hypot(car_x - obs.x, car_y - obs.y);
-        
-        // If the car enters the obstacle's radius, it crashed!
-        if (dist_to_obs <= (obs.radius)+0.25) {
-            total_cost += 100000000.0; // Massive penalty for hitting an obstacle
-        }
-    }
-
-    return total_cost;
+double Track::get_position_cost(double car_x, double car_y, const CostParams& cost_params) const {
+    return cost::position_cost(car_x, car_y,
+                               packed_xy.data(), static_cast<int>(centerLine.size()), trackWidth,
+                               packed_obs.empty() ? nullptr : packed_obs.data(),
+                               static_cast<int>(obstacles.size()),
+                               cost_params);
 }
