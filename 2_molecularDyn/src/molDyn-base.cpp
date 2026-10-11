@@ -1,21 +1,22 @@
 #include <iostream>
 #include <chrono>
+#include <filesystem>
 #include <iomanip>
+#include <sstream>
 
 #include "Helper.cpp"
 #include "Solver.hpp"
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <parameter_file>" 
-                  << argv[1] << "writeVtk 0 for 'no' and 1 for 'yes'" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <parameter_file> [writeVtk 0|1] [nParticles]\n";
         return 1;
     }
-    std::cout << argc << std::endl;
-    std::map <std::string, double> parameters;
+    std::map<std::string, double> parameters;
     parseParameter(argv[1], parameters);
     if (argc > 3) parameters["nParticles"] = std::stod(argv[3]);
-    bool genVTK = std::stoi(argv[2]);
+    const bool genVTK = (argc > 2) ? (std::stoi(argv[2]) != 0) : false;
+    std::filesystem::create_directories("data");
 
 #ifdef DEBUG
     std::cout << "Parameters loaded successfully." << std::endl;
@@ -46,13 +47,12 @@ int main(int argc, char* argv[]) {
         //     std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
         //     solver.calculateEnergy();
         // }
-        if (iter % writeVtk == 0 && genVTK) {
+        if (writeVtk > 0 && iter % writeVtk == 0 && genVTK) {
             std::ostringstream ss;
-            ss << "data/serial_"
+            ss << "data/serial/s_"
             << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
             << ".vtk";
     
-            // std::string filename = "data/outputSerial_" + std::to_string(iter) + ".vtk";
             solver.writeVTK(ss.str());
         }
     }

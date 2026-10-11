@@ -47,4 +47,4 @@
         std::cout << "[CUDA] " << label << " : " << _ms << " ms" << std::endl; \
         cudaEventDestroy(_start);                                               \
         cudaEventDestroy(_stop);                                                \
-    } while (0)
+    } while (0)                                                                 

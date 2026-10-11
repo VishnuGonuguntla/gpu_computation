@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 
@@ -7,18 +8,18 @@
 
 #include <cuda.h>
 #include "cudaSolver.cuh"
-#include "cuda-util.cuh"
+#include "../../cuda-util.cuh"
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <parameter_file>"
-                  << argv[1] << "writeVtk 0 for 'no' and 1 for 'yes'" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <parameter_file> [writeVtk 0|1] [nParticles]\n";
         return 1;
     }
-    std::map <std::string, double> parameters;
+    std::map<std::string, double> parameters;
     parseParameter(argv[1], parameters);
     if (argc > 3) parameters["nParticles"] = std::stod(argv[3]);
-    bool genVTK = std::stoi(argv[2]);
+    const bool genVTK = (argc > 2) ? (std::stoi(argv[2]) != 0) : false;
+    std::filesystem::create_directories("data");
 #ifdef DEBUG
     std::cout << "Parameters loaded successfully." << std::endl;
     for (auto i : parameters) {
@@ -64,11 +65,12 @@ int main(int argc, char* argv[]) {
         // }
         // std::cout << "Done" << std::endl;
         
-        if (iter % 100 == 0 && genVTK) {
+        const int writeEvery = parameters.count("writeVtk") ? static_cast<int>(parameters["writeVtk"]) : 100;
+        if (writeEvery > 0 && iter % writeEvery == 0 && genVTK) {
             solver.copyToHost();
             KERNEL_SYNC_CHECK();
             std::ostringstream ss;
-            ss << "data/parallel_"
+            ss << "data/parallel/p_"
             << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
             << ".vtk";
             solver.writeVTK(ss.str());

@@ -1,71 +1,46 @@
-# configuration
-
 TEST_CASE = stream
 BUILD_DIR = build
-CC = g++
-NVCC = nvcc
+CXX ?= g++
+NVCC ?= nvcc
+CXXFLAGS ?= -O3 -march=native -std=c++20
+NVCCFLAGS ?= -O3 -std=c++20 -arch=sm_80
 
-# default benchmark parameters
-
-NX    = 67108864
+NX    = 10000000
 NWARM = 2
 NIT   = 10
-
 PARAMETERS = ${NX} ${NWARM} ${NIT}
 
+targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-omp-host $(BUILD_DIR)/$(TEST_CASE)-cuda
 
-# all
-targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-omp-host $(BUILD_DIR)/$(TEST_CASE)-cuda 
+.PHONY: all mk-target-dir build-serial build-parallel bench clean
+.PHONY: $(TEST_CASE)-base $(TEST_CASE)-omp-host $(TEST_CASE)-cuda
 
-
-.PHONY: all
 all: mk-target-dir $(targets)
-
 
 mk-target-dir:
 	mkdir -p $(BUILD_DIR)
 
+build-serial: mk-target-dir $(BUILD_DIR)/$(TEST_CASE)-base
 
-# build rules
+build-parallel: mk-target-dir $(BUILD_DIR)/$(TEST_CASE)-omp-host $(BUILD_DIR)/$(TEST_CASE)-cuda
 
 $(BUILD_DIR)/$(TEST_CASE)-base: $(TEST_CASE)-base.cpp $(TEST_CASE)-util.h util.h
-	${CC} -O3 -march=native -std=c++17 -o $(BUILD_DIR)/$(TEST_CASE)-base $(TEST_CASE)-base.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $(TEST_CASE)-base.cpp
 
 $(BUILD_DIR)/$(TEST_CASE)-omp-host: $(TEST_CASE)-omp-host.cpp $(TEST_CASE)-util.h util.h
-	${CC} -O3 -march=native -std=c++17 -fopenmp -o $(BUILD_DIR)/$(TEST_CASE)-omp-host $(TEST_CASE)-omp-host.cpp
+	$(CXX) $(CXXFLAGS) -fopenmp -o $@ $(TEST_CASE)-omp-host.cpp
 
 $(BUILD_DIR)/$(TEST_CASE)-cuda: $(TEST_CASE)-cuda.cu $(TEST_CASE)-util.h util.h ../cuda-util.h
-	${NVCC} -O3 -std=c++17 -o $(BUILD_DIR)/$(TEST_CASE)-cuda $(TEST_CASE)-cuda.cu
+	$(NVCC) $(NVCCFLAGS) -o $@ $(TEST_CASE)-cuda.cu
 
-# aliases without build directory
-
-.PHONY: $(TEST_CASE)-base
 $(TEST_CASE)-base: $(BUILD_DIR)/$(TEST_CASE)-base
-
-.PHONY: $(TEST_CASE)-omp-host
 $(TEST_CASE)-omp-host: $(BUILD_DIR)/$(TEST_CASE)-omp-host
-
-.PHONY: $(TEST_CASE)-cuda
 $(TEST_CASE)-cuda: $(BUILD_DIR)/$(TEST_CASE)-cuda
 
-
-# automated benchmark target
-
-.PHONY: bench
 bench: all
-	@echo "Base:"
-	$(BUILD_DIR)/$(TEST_CASE)-base $(PARAMETERS)
-	@echo ""
-	@echo "OpenMP Host:"
-	$(BUILD_DIR)/$(TEST_CASE)-omp-host $(PARAMETERS)
-	@echo ""
-	@echo "CUDA:"
-	$(BUILD_DIR)/$(TEST_CASE)-cuda $(PARAMETERS)
-	@echo ""
+	@echo "Base:"; $(BUILD_DIR)/$(TEST_CASE)-base $(PARAMETERS)
+	@echo ""; echo "OpenMP Host:"; $(BUILD_DIR)/$(TEST_CASE)-omp-host $(PARAMETERS)
+	@echo ""; echo "CUDA:"; $(BUILD_DIR)/$(TEST_CASE)-cuda $(PARAMETERS)
 
-
-# clean target
-
-.PHONY: clean
 clean:
-	rm $(targets)
+	rm -f $(targets)

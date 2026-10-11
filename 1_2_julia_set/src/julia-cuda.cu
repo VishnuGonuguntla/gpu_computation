@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cmath>
 #include <iostream>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -58,12 +59,13 @@ void mandelbrot(unsigned char *data, const double cr,const double ci,
 
 int main(int argc, char *argv[]) {
     size_t width, height, maxIter;
-    parseCLA_1d(argc, argv, width, height, maxIter);
+    double c1, c2;
+    parseCLA_1d(argc, argv, width, height, maxIter, c1, c2);
 
     unsigned char *data;
     cudaMallocManaged(&data , width * height * 3 * sizeof(unsigned char));
     // double c[2] = {-0.7269,  0.1889};
-    double c[2] = {-0.525,     0.525};
+    double c[2] = {c1, c2};
 
     dim3 block(16, 16);
     dim3 grid( (width + block.x - 1)/block.x, (height + block.y - 1)/block.y );

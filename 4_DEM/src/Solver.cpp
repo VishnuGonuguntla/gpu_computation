@@ -126,7 +126,7 @@ void Solver::frictionalForce() {
                             double yUnit = y / dist;
                             double zUnit = z / dist;
                             double mu = params["mu"];
-                            double k = params["k"];
+                            double k = params.count("k") ? params["k"] : params["K"];
                             double gamma = params["gamma"];
 
                             double vx = vel[x(currentParticle)] - vel[x(i)];
@@ -145,10 +145,12 @@ void Solver::frictionalForce() {
                             double vy_surface = vy - xvdot*yUnit + xRw[1];
                             double vz_surface = vz - xvdot*zUnit + xRw[2];
                             double vSurfMag = std::hypot(vx_surface, vy_surface, vz_surface);
-                            double tangentialSuffix = std::min(gamma * std::hypot(vx_surface, vy_surface, vz_surface), mu*std::hypot(fx_n, fy_n, fz_n));
-                            fx_t -= (vx_surface/vSurfMag)*tangentialSuffix;
-                            fy_t -= (vy_surface/vSurfMag)*tangentialSuffix;
-                            fz_t -= (vz_surface/vSurfMag)*tangentialSuffix;
+                            double tangentialSuffix = std::min(gamma * vSurfMag, mu * std::hypot(fx_n, fy_n, fz_n));
+                            if (vSurfMag > 1e-12) {
+                                fx_t -= (vx_surface / vSurfMag) * tangentialSuffix;
+                                fy_t -= (vy_surface / vSurfMag) * tangentialSuffix;
+                                fz_t -= (vz_surface / vSurfMag) * tangentialSuffix;
+                            }
                             std::vector<double> rFtangential = cross(currentRadius*xUnit, currentRadius*yUnit, currentRadius*zUnit, 
                                                                      vx_surface*tangentialSuffix, vy_surface*tangentialSuffix, vz_surface*tangentialSuffix);
                             tau_x += rFtangential[0];
@@ -165,9 +167,10 @@ void Solver::frictionalForce() {
         double iInertia = 2.5/(mass[i] * radius[i]*radius[i]);
         double currentRadius = radius[i];
         
-        acc[x(i)] = (fx_n + fx_t)*iMass;
-        acc[y(i)] = (fy_n + fy_t)*iMass;
-        acc[z(i)] = (fz_n + fz_t)*iMass;
+        const double gravity = params.count("acceleration") ? params["acceleration"] : 9.81;
+        acc[x(i)] = (fx_n + fx_t) * iMass;
+        acc[y(i)] = (fy_n + fy_t) * iMass - gravity;
+        acc[z(i)] = (fz_n + fz_t) * iMass;
         angAcc[x(i)] = tau_x * iInertia;
         angAcc[y(i)] = tau_y * iInertia;
         angAcc[z(i)] = tau_z * iInertia;
@@ -235,7 +238,7 @@ void Solver::firstIntegratePBC() {
     int nParticles = params["nParticles"];
     double timeStep = params["timeStep"];
     double boxSize = params["boxSize"];
-    double k = params["k"];
+    double k = params.count("k") ? params["k"] : params["K"];
     double gamma = params["gamma"];
     double mu = params["mu"];
     double timeStep2 = timeStep * timeStep;

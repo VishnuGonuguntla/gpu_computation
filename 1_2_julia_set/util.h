@@ -4,19 +4,23 @@
 #include <iostream>
 #include <chrono>
 
-void parseCLA_1d(int argc, char *const *argv, size_t &WIDTH, size_t &HEIGHT, size_t &maxIter) {
+void parseCLA_1d(int argc, char *const *argv, size_t &WIDTH, size_t &HEIGHT, size_t &maxIter, double &c1, double &c2) {
     // default values
-    WIDTH = 800;
-    HEIGHT = 800;
+    WIDTH = 1000;
+    HEIGHT = 1000;
     maxIter = 100;
 
     // override with command line arguments
     int i = 1;
-    if (argc > i) WIDTH = atoi(argv[i]);
+    if (argc > i) WIDTH = std::stoi(argv[i]);
     ++i;
-    if (argc > i) HEIGHT = atoi(argv[i]);
+    if (argc > i) HEIGHT = std::stoi(argv[i]);
     ++i;
-    if (argc > i) maxIter = atoi(argv[i]);
+    if (argc > i) maxIter = std::stoi(argv[i]);
+    ++i;
+    if (argc > i) c1 = std::stod(argv[i]);
+    ++i;
+    if (argc > i) c2 = std::stod(argv[i]);
     ++i;
 }
 

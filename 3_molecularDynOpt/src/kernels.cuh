@@ -43,7 +43,6 @@ __global__ void kernelComputeForceLJ(double *d_pos, double *d_acc, double *d_mas
         zCell = (zCell % cellsPerDim + cellsPerDim) % cellsPerDim;
 
         int neighborCellIndex = xCell * cellsPerDim * cellsPerDim + yCell * cellsPerDim + zCell;
-        int particle = d_cell[neighborCellIndex];
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dz = -1; dz <= 1; dz++) {
@@ -146,7 +145,7 @@ void kernelBuildCellList(double *d_pos, int *d_cell, int *d_cellIndex, int numCe
 __global__
 void kernelCalculateEnergyPBC( double *d_pos, double *d_vel, double *d_acc, double *d_mass,
              int nParticles, double boxSize, 
-                         double sigma, double cutoff, double eps, double &totalEnergy) {
+                         double sigma, double cutoff, double eps, double *totalEnergy) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     double LDEnergy = 0;
     if (i < nParticles) {
@@ -171,7 +170,7 @@ void kernelCalculateEnergyPBC( double *d_pos, double *d_vel, double *d_acc, doub
                 }
             }
         }
-        atomicAdd(&totalEnergy, KE + 0.5*LDEnergy); //    totalEnergy += KE + 0.5 * LDEnergy;
+        atomicAdd(totalEnergy, KE + 0.5 * LDEnergy);
     }
 
     // requires blockReduce

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 
@@ -7,7 +8,7 @@
 
 #include "Helper.cpp"
 #include "cudaSolver.cuh"
-#include "cuda-util.cuh"
+#include "../../cuda-util.cuh"
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -16,6 +17,8 @@ int main(int argc, char* argv[]) {
     }
     std::map <std::string, double> parameters;
     parseParameter(argv[1], parameters);
+    if (argc > 3) parameters["nParticles"] = std::stod(argv[3]);
+    std::filesystem::create_directories("data");
     if (argc > 3) parameters["nParticles"] = std::stod(argv[3]);
 #ifdef DEBUG
     std::cout << "Parameters loaded successfully." << std::endl;
@@ -66,7 +69,7 @@ int main(int argc, char* argv[]) {
             // std::cout << solver.acc.size() << std::endl;
             // std::string filename = "data/parallel_" + std::to_string(iter) + ".vtk";
             std::ostringstream ss;
-            ss << "data/parallel_"
+            ss << "data/parallel/p_"
             << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
             << ".vtk";
             solver.writeVTK(ss.str());

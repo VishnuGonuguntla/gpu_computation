@@ -58,8 +58,8 @@ void Solver::computeForceLJ() {
             // y -= boxSize * std::round(y / boxSize);
             // z -= boxSize * std::round(z / boxSize);
 
-            double dist2 = x*x + y*y + z*z; //xij^2
-            if (dist2 < 1e-10) continue;
+            double dist2 = x * x + y * y + z * z;
+            if (dist2 < 1e-12 || dist2 > cutoff * cutoff) continue;
 
             double sr2  = (sigma * sigma) / dist2;  // (σ/r)²
             double sr6  = sr2 * sr2 * sr2;          // (σ/r)^6  — avoids expensive pow()

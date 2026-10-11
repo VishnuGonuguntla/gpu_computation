@@ -78,10 +78,15 @@ void Solver::cudaCalculateEnergy() {
 
     dim3 block(512);
     dim3 grid((nParticles + block.x - 1) / block.x);
-    double totalEnergy = 0;
+    double* d_totalEnergy = nullptr;
+    CUDA_CHECK(cudaMalloc(&d_totalEnergy, sizeof(double)));
+    CUDA_CHECK(cudaMemset(d_totalEnergy, 0, sizeof(double)));
     kernelCalculateEnergyPBC<<<grid, block>>>(d_pos, d_vel, d_acc, d_mass, nParticles, boxSize,
-                                              sigma, cutoff, eps, totalEnergy);
-    cudaDeviceSynchronize();
+                                              sigma, cutoff, eps, d_totalEnergy);
+    CUDA_CHECK(cudaDeviceSynchronize());
+    double totalEnergy = 0;
+    CUDA_CHECK(cudaMemcpy(&totalEnergy, d_totalEnergy, sizeof(double), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaFree(d_totalEnergy));
     std::cout << "Energy: " << totalEnergy << std::endl;
 }
 

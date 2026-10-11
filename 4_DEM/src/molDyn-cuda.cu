@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 
@@ -7,7 +8,7 @@
 
 #include "Helper.cpp"
 #include "cudaSolver.cuh"
-#include "cuda-util.cuh"
+#include "../../cuda-util.cuh"
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -16,6 +17,8 @@ int main(int argc, char* argv[]) {
     }
     std::map <std::string, double> parameters;
     parseParameter(argv[1], parameters);
+    if (argc > 3) parameters["nParticles"] = std::stod(argv[3]);
+    std::filesystem::create_directories("data");
 #ifdef DEBUG
     std::cout << "Parameters loaded successfully." << std::endl;
     for (auto i : parameters) {
@@ -30,7 +33,9 @@ int main(int argc, char* argv[]) {
     double timeStep = parameters["timeStep"];
     double nTimeSteps = parameters.at("nTime") / timeStep;
     int calculateEnergy = (int)parameters["calculateEnergy"];
-    int writeVTK = (int)parameters["writeVTK"];
+    int writeVTK = 100;
+    if (parameters.count("writeVtk")) writeVTK = static_cast<int>(parameters["writeVtk"]);
+    else if (parameters.count("writeVTK")) writeVTK = static_cast<int>(parameters["writeVTK"]);
     solver.allocateDevice();
     KERNEL_SYNC_CHECK();
     solver.cudaInitSolver();
@@ -58,11 +63,11 @@ int main(int argc, char* argv[]) {
         solver.cudaFinalIntegratePBC(); // O(N)
         KERNEL_SYNC_CHECK();
 
-        if (iter % writeVTK == 0) {
+        if (writeVTK > 0 && iter % writeVTK == 0) {
             solver.copyToHost();
             KERNEL_SYNC_CHECK();
             std::ostringstream ss;
-            ss << "data/parallel_"
+            ss << "data/parallel/p_"
             << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
             << ".vtk";
             solver.writeVTK(ss.str());

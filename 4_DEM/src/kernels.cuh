@@ -33,7 +33,7 @@ void kernelInitSolver(double *d_pos,
             d_vel[y(n)] = raw[3*n + 1];
             d_vel[z(n)] = raw[3*n + 2];
             d_acc[x(n)] = 0;
-            d_acc[y(n)] = -9.81;
+            d_acc[y(n)] = -gravity;
             d_acc[z(n)] = 0;
             d_pos[x(n)] = (i + 0.5) * spacing;
             d_pos[y(n)] = (j + 0.5) * spacing;
@@ -109,11 +109,11 @@ __global__ void kernelFrictionalForce(double *d_pos,
                                      int *d_cell, int *d_cellIndex,
                                      int nParticles, double boxSize,
                                      double sigma, double cutoff, double eps,
-                                     double k, double gamma, double mu,
+                                     double k, double gamma, double mu, double gravity,
                                      int cellsPerDim, double cellSize ) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < nParticles) {
-        double fx = 0, fy = -d_mass[i]*9.81, fz = 0;
+        double fx = 0, fy = -d_mass[i] * gravity, fz = 0;
         double taux = 0, tauy = 0, tauz = 0;
         int xCell = static_cast<int>(std::floor(d_pos[x(i)] / cellSize));
         int yCell = static_cast<int>(std::floor(d_pos[y(i)] / cellSize));
@@ -308,17 +308,16 @@ void kernelCalculateEnergyPBC(double *d_pos,
                               double *d_acc, 
                               double *d_mass,
                               int nParticles, double boxSize, double sigma, 
-                              double cutoff, double eps, double &totalEnergy) {
+                              double cutoff, double eps, double *totalEnergy) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     double LDEnergy = 0;
     if (i < nParticles) {
         double KE = 0.5 * d_mass[i] * (d_vel[3*i + 0] * d_vel[3 *i + 0] + d_vel[3*i + 1] * d_vel[3 *i + 1] + d_vel[3*i + 2] * d_vel[3 *i + 2]);
         for (int j = 0; j < nParticles; j++ ) {
             if (j != i) {
-                // std::cout << pos.size() << " " << vel.size() << " " <<  acc.size() << std::endl;
-                double x = d_pos[x(i)] - d_pos[x(i)]; 
-                double y = d_pos[y(i)] - d_pos[y(i)]; 
-                double z = d_pos[z(i)] - d_pos[z(i)];
+                double x = d_pos[x(i)] - d_pos[x(j)];
+                double y = d_pos[y(i)] - d_pos[y(j)];
+                double z = d_pos[z(i)] - d_pos[z(j)];
 
                 x -= boxSize * std::floor(x / boxSize);
                 y -= boxSize * std::floor(y / boxSize);
@@ -333,7 +332,7 @@ void kernelCalculateEnergyPBC(double *d_pos,
                 }
             }
         }
-        atomicAdd(&totalEnergy, KE + 0.5*LDEnergy); //    totalEnergy += KE + 0.5 * LDEnergy;
+        atomicAdd(totalEnergy, KE + 0.5 * LDEnergy);
     }
 
     // requires blockReduce

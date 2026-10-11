@@ -1,63 +1,43 @@
-# configuration
-
 TEST_CASE = julia
 BUILD_DIR = build
-CC = g++
-NVCC = nvcc
+CXX ?= g++
+NVCC ?= nvcc
+CXXFLAGS ?= -O3 -march=native -std=c++20
+NVCCFLAGS ?= -O3 -std=c++20 -arch=sm_80
 
-# default benchmark parameters
+WIDTH = 1000
+HEIGHT = 1000
+MAXITER = 100
+C1 = -0.7269
+C2 = 0.1889
+PARAMETERS = ${WIDTH} ${HEIGHT} ${MAXITER} ${C1} ${C2}
 
-WIDTH    = 800
-HEIGHT = 800
-MAXITER   = 100
+targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-cuda
 
-PARAMETERS = ${WIDTH} ${HEIGHT} ${MAXITER}
+.PHONY: all mk-target-dir build-serial build-parallel bench clean
+.PHONY: $(TEST_CASE)-base $(TEST_CASE)-cuda
 
-
-# all
-targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-cuda 
-
-
-.PHONY: all
 all: mk-target-dir $(targets)
 
-
 mk-target-dir:
-	@mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR) results
 
+build-serial: mk-target-dir $(BUILD_DIR)/$(TEST_CASE)-base
 
-# build rules
+build-parallel: mk-target-dir $(BUILD_DIR)/$(TEST_CASE)-cuda
 
-$(BUILD_DIR)/$(TEST_CASE)-base: $(TEST_CASE)-base.cpp util.h
-	${CC} -O3 -march=native -std=c++17 -o $(BUILD_DIR)/$(TEST_CASE)-base $(TEST_CASE)-base.cpp
+$(BUILD_DIR)/$(TEST_CASE)-base: src/julia-base.cpp util.h include/stb_image_write.h
+	$(CXX) $(CXXFLAGS) -I. -Isrc -o $@ src/julia-base.cpp
 
-$(BUILD_DIR)/$(TEST_CASE)-cuda: $(TEST_CASE)-cuda.cu util.h ../cuda-util.h
-	${NVCC} -O3 -std=c++17 -o $(BUILD_DIR)/$(TEST_CASE)-cuda $(TEST_CASE)-cuda.cu
+$(BUILD_DIR)/$(TEST_CASE)-cuda: src/julia-cuda.cu util.h include/stb_image_write.h ../cuda-util.h
+	$(NVCC) $(NVCCFLAGS) -I. -Isrc -o $@ src/julia-cuda.cu
 
-# aliases without build directory
-
-.PHONY: $(TEST_CASE)-base
 $(TEST_CASE)-base: $(BUILD_DIR)/$(TEST_CASE)-base
-
-.PHONY: $(TEST_CASE)-cuda
 $(TEST_CASE)-cuda: $(BUILD_DIR)/$(TEST_CASE)-cuda
 
-
-# automated benchmark target
-
-.PHONY: bench
 bench: all
-	@echo "Base:"
-	@$(BUILD_DIR)/$(TEST_CASE)-base $(PARAMETERS)
-	@echo ""
+	@echo "Base:"; $(BUILD_DIR)/$(TEST_CASE)-base $(PARAMETERS)
+	@echo ""; echo "CUDA:"; $(BUILD_DIR)/$(TEST_CASE)-cuda $(PARAMETERS)
 
-	@echo "CUDA:"
-	@$(BUILD_DIR)/$(TEST_CASE)-cuda $(PARAMETERS)
-	@echo ""
-
-
-# clean target
-
-.PHONY: clean
 clean:
-	rm $(targets)
+	rm -f $(targets)

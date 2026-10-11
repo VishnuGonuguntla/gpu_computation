@@ -1,0 +1,23 @@
+# MPPI Configuration (Algorithm 1, arXiv:2409.07563)
+samples 512
+steps 50
+dt 0.02
+lambda 1.0
+std_steer 0.5
+std_throttle 800
+max_steer 0.8
+max_throttle 10000
+
+# Simulation
+totalTime 15
+numCars 9
+
+# Cost weights (shared by serial and CUDA)
+cost_offtrack 100000000
+cost_obstacle 100000000
+cost_collision 1000000
+cost_speed 10000
+cost_steer 10
+cost_throttle 0.01
+cost_progress 500
+collision_radius 2.5

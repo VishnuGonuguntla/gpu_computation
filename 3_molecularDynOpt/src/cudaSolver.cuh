@@ -1,16 +1,18 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <random>
-#include <map>
-#include <iostream>
+#include <algorithm>
+#include <cmath>
 #include <fstream>
+#include <iostream>
+#include <map>
+#include <random>
+#include <string>
+#include <vector>
 
 #include <cuda.h>
 #include <curand.h>
 
-#include "cuda-util.cuh"
+#include "../../cuda-util.cuh"
 
 class Solver {
 public:
@@ -29,7 +31,7 @@ public:
 
         this->boxSize = params["boxSize"];
         this->cutoff = params["rCutoff"];
-        this->numCellsPerDim = static_cast<int>(std::floor(boxSize / cutoff));
+        this->numCellsPerDim = std::max(1, static_cast<int>(std::floor(boxSize / std::max(cutoff, 1e-12))));
         this->cellSize = boxSize / numCellsPerDim;
         this->numCells = numCellsPerDim * numCellsPerDim * numCellsPerDim;
         this->cell.resize(this->numCells, -1);

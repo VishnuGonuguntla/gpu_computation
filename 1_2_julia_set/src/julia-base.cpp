@@ -1,5 +1,6 @@
 #include <chrono>
 #include <iostream>
+#include <string>
 #include <cmath>
 #include <array>
 
@@ -26,7 +27,8 @@ inline int mandelbrot_set(std::array<double, 2> z, std::array<double, 2> c, int 
 int main(int argc, char *argv[]) {
     // Should Assign Memory for storing the final data
     size_t width, height, maxIter;
-    parseCLA_1d(argc, argv, width, height, maxIter);
+    double c1, c2;
+    parseCLA_1d(argc, argv, width, height, maxIter, c1, c2);
 
     char *data = new char[ width * height * 3 ];
     double x_range[2] = {-2, 2};
@@ -34,16 +36,16 @@ int main(int argc, char *argv[]) {
     double del_x = (x_range[1] - x_range[0])/width;
     double del_y = (y_range[1] - y_range[0])/height;
 
-    std::array<double, 2>  c = {-0.7269,  0.1889};
+    std::array<double, 2>  c = {c1, c2};
     
     int temp;
     auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < width * height ; i++) {
 
-        std::array<double, 2> z = { x_range[0] + (i %  width) * del_x, y_range[0] + (i / width) * del_y };
+        std::array<double, 2> z = { x_range[0] + (i %  width) * del_x, y_range[0] + ((double)i / width) * del_y };
         temp = mandelbrot_set(z, c, maxIter);
         if (temp == maxIter) {
-            data[3*i+0] = 255;
+            data[3*i+0] = static_cast<char>(255);
             data[3*i+1] = 0;
             data[3*i+2] = 0;
         } else {

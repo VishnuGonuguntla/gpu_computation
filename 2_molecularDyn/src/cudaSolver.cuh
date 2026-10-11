@@ -9,7 +9,7 @@
 #include <fstream>
 #include <curand.h>
 
-#include "cuda-util.cuh"
+#include "../../cuda-util.cuh"
 
 class Solver {
 public:

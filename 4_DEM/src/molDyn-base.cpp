@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 
@@ -13,6 +14,8 @@ int main(int argc, char* argv[]) {
     }
     std::map <std::string, double> parameters;
     parseParameter(argv[1], parameters);
+    if (argc > 3) parameters["nParticles"] = std::stod(argv[3]);
+    std::filesystem::create_directories("data");
 
 #ifdef DEBUG
     std::cout << "Parameters loaded successfully." << std::endl;
@@ -49,7 +52,7 @@ int main(int argc, char* argv[]) {
         if (iter % 100 == 0) {
             // std::cout << "TimeStep: " << iter*timeStep << " ;Energy: " << std::endl; 
             std::ostringstream ss;
-            ss << "data/serial_"
+            ss << "data/serial/s_"
             << std::setw(6) << std::setfill('0') <<  std::to_string(iter)
             << ".vtk";
             auto startWrite = std::chrono::steady_clock::now();

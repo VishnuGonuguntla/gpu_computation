@@ -6,7 +6,7 @@
 # Geometry Data:
 # -------------
 
-nParticles 1000
+nParticles 2000
 rCutoff 2.5
 radius 0.5
 youngsModulus 200.0

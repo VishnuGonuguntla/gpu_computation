@@ -39,16 +39,17 @@ __global__ void kernelComputeForceLJ(double *d_pos,
             double y = d_pos[3*i + 1] - d_pos[3*j + 1]; 
             double z = d_pos[3*i + 2] - d_pos[3*j + 2];
 
-            double dist2 = x*x + y*y + z*z;
+            double dist2 = x * x + y * y + z * z;
+            if (dist2 < 1e-12 || dist2 > cutoff * cutoff) continue;
 
-            double sr2  = (sigma * sigma) / dist2;  
-            double sr6  = sr2 * sr2 * sr2;          
-            double sr12 = sr6 * sr6;                
+            double sr2  = (sigma * sigma) / dist2;
+            double sr6  = sr2 * sr2 * sr2;
+            double sr12 = sr6 * sr6;
             double constval = 24.0 * eps * (2 * sr12 - sr6) / dist2;
 
-            fx += constval *x;
-            fy += constval *y;
-            fz += constval *z;    
+            fx += constval * x;
+            fy += constval * y;
+            fz += constval * z; 
         }
         d_acc[3*i + 0] = fx / d_mass[i];
         d_acc[3*i + 1] = fy / d_mass[i];
