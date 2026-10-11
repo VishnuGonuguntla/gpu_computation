@@ -3,7 +3,7 @@
 CellList::CellList(std::map<std::string, double> params) {
     this->boxSize = params["boxSize"];
     this->cutoff = params["rCutoff"];
-    this->numCellsPerDim = static_cast<int>(std::floor(boxSize / cutoff));
+    this->numCellsPerDim = std::max(1, static_cast<int>(std::floor(boxSize / std::max(cutoff, 1e-12))));
     this->cellSize = boxSize / numCellsPerDim;
     this->numCells = numCellsPerDim * numCellsPerDim * numCellsPerDim;
     this->cell.resize(this->numCells, -1);
@@ -51,13 +51,17 @@ void CellList::build(std::vector<double>& pos) {
 // // );
 // }
 
-// int CellList::getCount() {
-//     std::vector<int> count(numCells, 0);
-//     for (int i = 0; i < numCells; i++) {
-//         count[i] = cellList[i].size();
-//     }
-//     return count;
-// }
+std::vector<int> CellList::getCount() {
+    std::vector<int> count(numCells, 0);
+    for (int i = 0; i < numCells; ++i) {
+        int p = cell[i];
+        while (p != -1) {
+            count[i]++;
+            p = cellIndex[p];
+        }
+    }
+    return count;
+}
 
 CellList::~CellList() {
     cell.clear();

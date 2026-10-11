@@ -44,16 +44,17 @@ void Solver::cudaComputeForce() {
     double cutoff = params["rCutoff"];
     double eps = params["eps"];
 
-    double k = params["k"];
+    double k = params.count("k") ? params["k"] : params["K"];
     double gamma = params["gamma"];
     double mu = params["mu"];
+    double gravity = params.count("acceleration") ? params["acceleration"] : 9.81;
     dim3 block(512);
     dim3 grid((nParticles + block.x - 1) / block.x);
 
     kernelFrictionalForce<<<grid, block>>>(d_pos, d_vel, d_acc, 
                                           d_mass, d_radius, d_angVel, d_angAcc, d_cell, 
                                           d_cellIndex, nParticles, boxSize, 
-                                          sigma, cutoff, eps, k, gamma, mu, numCellsPerDim, cellSize);
+                                          sigma, cutoff, eps, k, gamma, mu, gravity, numCellsPerDim, cellSize);
 }
 
 void Solver::cudaFirstIntegratePBC() {
@@ -61,7 +62,7 @@ void Solver::cudaFirstIntegratePBC() {
     double timeStep = params["timeStep"];
     double timeStep2 = timeStep * timeStep;
     double boxSize = params["boxSize"];
-    double k = params["k"];
+    double k = params.count("k") ? params["k"] : params["K"];
     double gamma = params["gamma"];
     double mu = params["mu"];
 
@@ -91,10 +92,15 @@ void Solver::cudaCalculateEnergy() {
 
     dim3 block(512);
     dim3 grid((nParticles + block.x - 1) / block.x);
-    double totalEnergy = 0;
+    double* d_totalEnergy = nullptr;
+    CUDA_CHECK(cudaMalloc(&d_totalEnergy, sizeof(double)));
+    CUDA_CHECK(cudaMemset(d_totalEnergy, 0, sizeof(double)));
     kernelCalculateEnergyPBC<<<grid, block>>>(d_pos, d_vel, d_acc, d_mass, nParticles, boxSize,
-                                              sigma, cutoff, eps, totalEnergy);
-    cudaDeviceSynchronize();
+                                              sigma, cutoff, eps, d_totalEnergy);
+    CUDA_CHECK(cudaDeviceSynchronize());
+    double totalEnergy = 0;
+    CUDA_CHECK(cudaMemcpy(&totalEnergy, d_totalEnergy, sizeof(double), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaFree(d_totalEnergy));
     std::cout << "Energy: " << totalEnergy << std::endl;
 }
 

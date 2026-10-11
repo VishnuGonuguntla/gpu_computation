@@ -1,0 +1,34 @@
+# Problem specific Data:
+# ---------------------
+
+# name molDyn
+
+# Geometry Data:
+# -------------
+
+nParticles 2000
+rCutoff 2.5
+radius 0.5
+youngsModulus 200.0
+poissonRatio 0.3
+rEffective 0.5
+
+# constants:
+# -------------------
+mass 1
+sigma 1
+eps 1
+kT 1
+boxSize 20
+
+# Iteration Data:
+# -------------------
+timeStep 0.001
+nTime 2
+epsilon 0.0000001
+omg 1.0
+rebuildCellList 10
+neighborRebuild 20
+calculateEnergy 1000
+
++=================================
