@@ -5,7 +5,13 @@ Each sub-directory in this folder is an exercise implemented in the course High 
 Compilation + Running Binaries
 
 1. Exercise 1:
-    1.1 make bench
-    1.2 make julia
-2. Assignment 2:
-    
+* make stream-(serial/parallel)
+* make julia-(serial/parallel)
+2. Assignment 2: Molecular Dynamic Simulation (O(n^2))
+* make molDyn-(serial/parallel)
+3. Assignment 3: Molecular Dynamic Simulation with CellList (O(nlogn))
+* make molDynOpt-(serial/parallel)
+4. Assignment 4: (Discrete Element Method)
+* make dem-(serial/parallel)
+## Project (Model Predictive Path Integrate)
+* make mppi-(serial/parallel)

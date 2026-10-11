@@ -50,13 +50,6 @@ cd build
 ./mppi-cuda   config.par carsConfig.par trackData.txt telemetry.txt
 ```
 
-Smoke test (2 cars, 1 s):
-
-```bash
-cd build
-./mppi-serial config_smoke.par ../carsConfig.par ../trackData.txt telemetry.txt
-```
-
 Outputs:
 
 - `telemetry.txt` — one line per car per step (state, control, predicted path)

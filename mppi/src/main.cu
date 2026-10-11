@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
     const std::string config_path = argc > 1 ? argv[1] : "config.par";
     const std::string cars_path = argc > 2 ? argv[2] : "carsConfig.par";
     const std::string track_path = argc > 3 ? argv[3] : "trackData.txt";
-    const std::string telem_path = argc > 4 ? argv[4] : "telemetry_cuda.txt";
+    const std::string telem_path = argc > 4 ? argv[4] : "telemetry_parallel.txt";
 
     IOManager io;
     AppConfig cfg = io.load_config(config_path);

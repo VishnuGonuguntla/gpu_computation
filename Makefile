@@ -66,10 +66,10 @@ dem-parallel:
 	$(MAKE) -C 4_DEM build-parallel
 
 mppi-serial:
-	$(MAKE) -C mini_project build-serial
+	$(MAKE) -C mppi build-serial
 
 mppi-parallel:
-	$(MAKE) -C mini_project build-parallel
+	$(MAKE) -C mppi build-parallel
 
 clean:
 	$(MAKE) -C 1_1_stream_benchmark clean
