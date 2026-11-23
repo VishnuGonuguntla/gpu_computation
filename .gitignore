@@ -45,5 +45,6 @@
 mppi-cuda
 run.sh
 **/data
+**/build
 **/*.nsys-rep
 **/*.sqlite

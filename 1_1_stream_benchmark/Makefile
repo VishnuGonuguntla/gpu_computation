@@ -30,7 +30,7 @@ $(BUILD_DIR)/$(TEST_CASE)-base: $(TEST_CASE)-base.cpp $(TEST_CASE)-util.h util.h
 $(BUILD_DIR)/$(TEST_CASE)-omp-host: $(TEST_CASE)-omp-host.cpp $(TEST_CASE)-util.h util.h
 	$(CXX) $(CXXFLAGS) -fopenmp -o $@ $(TEST_CASE)-omp-host.cpp
 
-$(BUILD_DIR)/$(TEST_CASE)-cuda: $(TEST_CASE)-cuda.cu $(TEST_CASE)-util.h util.h ../cuda-util.h
+$(BUILD_DIR)/$(TEST_CASE)-cuda: $(TEST_CASE)-cuda.cu $(TEST_CASE)-util.h util.h ../cuda-util.cuh
 	$(NVCC) $(NVCCFLAGS) -o $@ $(TEST_CASE)-cuda.cu
 
 $(TEST_CASE)-base: $(BUILD_DIR)/$(TEST_CASE)-base

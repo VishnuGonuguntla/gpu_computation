@@ -9,7 +9,7 @@ WIDTH = 1000
 HEIGHT = 1000
 MAXITER = 100
 C1 = -0.7269
-C2 = 0.1889
+C2 = 0.27015
 PARAMETERS = ${WIDTH} ${HEIGHT} ${MAXITER} ${C1} ${C2}
 
 targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-cuda
@@ -26,10 +26,10 @@ build-serial: mk-target-dir $(BUILD_DIR)/$(TEST_CASE)-base
 
 build-parallel: mk-target-dir $(BUILD_DIR)/$(TEST_CASE)-cuda
 
-$(BUILD_DIR)/$(TEST_CASE)-base: src/julia-base.cpp util.h include/stb_image_write.h
+$(BUILD_DIR)/$(TEST_CASE)-base: src/julia-base.cpp src/util.h include/stb_image_write.h
 	$(CXX) $(CXXFLAGS) -I. -Isrc -o $@ src/julia-base.cpp
 
-$(BUILD_DIR)/$(TEST_CASE)-cuda: src/julia-cuda.cu util.h include/stb_image_write.h ../cuda-util.h
+$(BUILD_DIR)/$(TEST_CASE)-cuda: src/julia-cuda.cu src/util.h include/stb_image_write.h ../cuda-util.cuh
 	$(NVCC) $(NVCCFLAGS) -I. -Isrc -o $@ src/julia-cuda.cu
 
 $(TEST_CASE)-base: $(BUILD_DIR)/$(TEST_CASE)-base

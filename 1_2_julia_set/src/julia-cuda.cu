@@ -3,27 +3,31 @@
 #include <iostream>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "include/stb_image_write.h"
+#include "../include/stb_image_write.h"
 
-#include "../cuda-util.cuh"
+#include "../../cuda-util.cuh"
 #include "util.h"
 
 __global__
-void mandelbrot(unsigned char *data, const double cr,const double ci,
+void julia(unsigned char *data, const double cr,const double ci,
                 double x0, double y0,
                 double del_x, double del_y, 
-                int width, int height, int maxIter) {
+                int width, int height, int maxIter) 
+{
     
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     int j = blockDim.y * blockIdx.y + threadIdx.y;
     
     // double z[2] = { x0 + (i / width) * del_x, y0 + (j/height) * del_y};
-    int iter;
     if (i < width && j < height) {
+
         double zr = x0 + i * del_x;
         double zi = y0 + j * del_y;
+
+        int iter;
+    
         for (iter = 0; iter < maxIter; ++iter) {
-            if (zr*zr + zi*zi > 4.0) {
+            if (zr*zr + zi*zi > 10.0) {
                 break;
                 
             }
@@ -33,31 +37,23 @@ void mandelbrot(unsigned char *data, const double cr,const double ci,
             zi = zi_new;
         }
 
-        double smooth_iter = iter;
+        // double smooth_iter = iter;
         int idx = (j * width + i) * 3;
         if (iter == maxIter) {
-            data[idx+0] = 0;    // inside set — black
+            data[idx+0] = 255;    // inside set — Red
             data[idx+1] = 0;
             data[idx+2] = 0;
         } else {
-            double log_zn = log(zr*zr + zi*zi) / 2.0;
-            double nu = log(log_zn / log(2.0)) / log(2.0);
-            smooth_iter = iter + 1 - nu;
-
-            double t = smooth_iter / maxIter;
-
-            data[idx+0] = (int)(127.5 * (1 + cos(6.2831 * (t + 0.0))));
-            data[idx+1] = (int)(127.5 * (1 + cos(6.2831 * (t + 0.33))));
-            data[idx+2] = (int)(127.5 * (1 + cos(6.2831 * (t + 0.67))));
-
-            // data[idx+0] = (iter * 9)  % 256;   // R
-            // data[idx+1] = (iter * 5)  % 256;   // G
-            // data[idx+2] = (iter * 3)  % 256;   // B
+            data[idx+0] = 0;
+            data[idx+1] = 0;
+            data[idx+2] = iter *(255.0f/maxIter);
         }
     }
+    
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) 
+{
     size_t width, height, maxIter;
     double c1, c2;
     parseCLA_1d(argc, argv, width, height, maxIter, c1, c2);
@@ -77,14 +73,14 @@ int main(int argc, char *argv[]) {
 
     cudaDeviceSynchronize();
     auto start = std::chrono::steady_clock::now();
-    mandelbrot<<<grid, block>>>(data, c[0], c[1], x_range[0], y_range[0], del_x, del_y, width, height, maxIter);
+    julia<<<grid, block>>>(data, c[0], c[1], x_range[0], y_range[0], del_x, del_y, width, height, maxIter);
     cudaDeviceSynchronize();
     auto end = std::chrono::steady_clock::now();
 
-    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    // std::cout << "Elapsed time: " << duration.count() << " ms\n";
-    stbi_write_png("results/julia-cuda.png", width, height, 3, data, width * 3);
     printStats(end - start, width*height, maxIter);
+    stbi_write_png("results/julia-parallel.png", width, height, 3, data, width * 3);
+
     cudaFree(data);
+
     return 0;
 }
