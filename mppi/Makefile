@@ -11,7 +11,7 @@ CUDA_SRC = $(SRC_DIR)/main.cu $(SRC_DIR)/CudaMPPI.cu $(SRC_DIR)/Car.cpp $(SRC_DI
 DATA_FILES = config.par carsConfig.par trackData.txt
 VIZ = $(SRC_DIR)/visualizer.py
 
-targets = mppi-serial mppi-cuda
+targets = mppi-serial mppi-parallel
 
 .PHONY: all serial cuda data clean build-serial build-parallel
 
@@ -19,20 +19,20 @@ all: serial cuda data
 
 build-serial: mppi-serial data
 
-build-parallel: mppi-cuda data
+build-parallel: mppi-parallel data
 
 serial: build-serial
 
-cuda: build-parallel
+parallel: build-parallel
 
 
 mppi-serial: $(SERIAL_SRC) $(SRC_DIR)/types.h $(SRC_DIR)/dynamics.h $(SRC_DIR)/cost.h $(SRC_DIR)/Car.h $(SRC_DIR)/Track.h $(SRC_DIR)/MPPI.h $(SRC_DIR)/IOManager.h
 	$(CXX) $(CXXFLAGS) -I$(SRC_DIR) -o $@ $(SERIAL_SRC)
 
-mppi-cuda: $(CUDA_SRC) $(SRC_DIR)/kernels.cuh $(SRC_DIR)/CudaMPPI.cuh ../cuda-util.cuh $(SRC_DIR)/types.h $(SRC_DIR)/dynamics.h $(SRC_DIR)/cost.h
+mppi-parallel: $(CUDA_SRC) $(SRC_DIR)/kernels.cuh $(SRC_DIR)/CudaMPPI.cuh ../cuda-util.cuh $(SRC_DIR)/types.h $(SRC_DIR)/dynamics.h $(SRC_DIR)/cost.h
 	$(NVCC) $(NVCCFLAGS) -I$(SRC_DIR) -o $@ $(CUDA_SRC) $(LDFLAGS)
 
 clean:
-	rm -f mppi-serial  mppi-cuda \
+	rm -f mppi-serial  mppi-parallel \
 	      telemetry_serial.txt  telemetry_parallel.txt \
 	      run_info.txt
