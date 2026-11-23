@@ -15,7 +15,7 @@ targets = $(BUILD_DIR)/$(TEST_CASE)-base $(BUILD_DIR)/$(TEST_CASE)-cuda
 all: mk-target-dir $(targets)
 
 mk-target-dir:
-	mkdir -p $(BUILD_DIR) data
+	mkdir -p $(BUILD_DIR) data/serial data/parallel
 
 build-serial: mk-target-dir $(BUILD_DIR)/$(TEST_CASE)-base
 

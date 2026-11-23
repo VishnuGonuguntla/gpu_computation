@@ -37,33 +37,21 @@ int main(int argc, char* argv[]) {
     solver.allocateDevice();
     KERNEL_SYNC_CHECK();
     solver.cudaInitSolver();
-    // std::cout <<  "Done" << std::endl;
-    KERNEL_SYNC_CHECK();
     solver.cudaComputeForceLJ();
-    KERNEL_SYNC_CHECK();
     std::cout << "NParticles: " << nParticles << std::endl;
     auto start = std::chrono::steady_clock::now();
     double totalComputeTime = 0.0;
     
     for (int iter = 0; iter < (int)nTimeSteps; iter++) {
         solver.cudaFirstIntegratePBC(); // O(N)
-        KERNEL_SYNC_CHECK();
-
+    
         auto startCompute = std::chrono::steady_clock::now();
         solver.cudaComputeForceLJ(); // O(N^2)
-        KERNEL_SYNC_CHECK();
         auto endCompute = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsedSeconds = endCompute - startCompute;
-        // std::cout << "Time: " << elapsedSeconds.count() << std::endl;
         totalComputeTime += elapsedSeconds.count();
         solver.cudaFinalIntegratePBC(); // O(N)
-        KERNEL_SYNC_CHECK();
-
-        // if (iter % calculateEnergy == 0) {
-        //     std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
-        //     solver.cudaCalculateEnergy();
-        // }
-        // std::cout << "Done" << std::endl;
+    
         
         const int writeEvery = parameters.count("writeVtk") ? static_cast<int>(parameters["writeVtk"]) : 100;
         if (writeEvery > 0 && iter % writeEvery == 0 && genVTK) {
@@ -75,16 +63,11 @@ int main(int argc, char* argv[]) {
             << ".vtk";
             solver.writeVTK(ss.str());
         }
-        // std::cout << "Done" << std::endl;
-
+    
     }
     auto end = std::chrono::steady_clock::now();
     std::cout << "Average Compute Time: " << totalComputeTime / nTimeSteps << " seconds" << std::endl;
     printStats(end-start, nParticles, (int)nTimeSteps);
-    // solver.copyToHost();
-    // KERNEL_SYNC_CHECK();
-    // std::cout << solver.acc.size() << std::endl;
-    // solver.writeVTK("cudaOutput.vtk");
-
+    
     return 0;
 }

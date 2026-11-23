@@ -43,10 +43,7 @@ int main(int argc, char* argv[]) {
         solver.computeForceLJ(); // O(N^2)
 
         solver.finalIntegratePBC(); // O(N)
-        // if (iter % calculateEnergy == 0) {
-        //     std::cout << "TimeStep: " << iter*timeStep << " ;Energy: ";
-        //     solver.calculateEnergy();
-        // }
+
         if (writeVtk > 0 && iter % writeVtk == 0 && genVTK) {
             std::ostringstream ss;
             ss << "data/serial/s_"
@@ -59,7 +56,6 @@ int main(int argc, char* argv[]) {
     auto end = std::chrono::steady_clock::now();
     printStats(end-start, nParticles, (int)nTimeSteps);
     
-    // solver.writeVTK("output.vtk");
 
     return 0;
 }
