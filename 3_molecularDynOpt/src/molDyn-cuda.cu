@@ -38,11 +38,8 @@ int main(int argc, char* argv[]) {
     solver.allocateDevice();
     KERNEL_SYNC_CHECK();
     solver.cudaInitSolver();
-    KERNEL_SYNC_CHECK();
     solver.cudaBuildCellList();
-    KERNEL_SYNC_CHECK();
     solver.cudaComputeForceLJ();
-    KERNEL_SYNC_CHECK();
     double totalComputeTime = 0.0;
     auto start = std::chrono::steady_clock::now();
 
@@ -50,20 +47,17 @@ int main(int argc, char* argv[]) {
         // std::cout << "Time: " << iter * timeStep << std::endl;
 
         solver.cudaFirstIntegratePBC(); // O(N)
-        KERNEL_SYNC_CHECK();
         solver.cudaBuildCellList();
-        KERNEL_SYNC_CHECK();
         auto startCompute = std::chrono::steady_clock::now();
         solver.cudaComputeForceLJ(); // O(N^2)
-        KERNEL_SYNC_CHECK();
         auto endCompute = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsedSeconds = endCompute - startCompute;
         // std::cout << "Time: " << elapsedSeconds.count() << std::endl;
         totalComputeTime += elapsedSeconds.count();
         solver.cudaFinalIntegratePBC(); // O(N)
-        KERNEL_SYNC_CHECK();
 
         if (iter % 100 == 0) {
+            KERNEL_SYNC_CHECK();
             solver.copyToHost();
             KERNEL_SYNC_CHECK();
             // std::cout << solver.acc.size() << std::endl;

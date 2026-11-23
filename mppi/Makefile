@@ -29,7 +29,7 @@ cuda: build-parallel
 mppi-serial: $(SERIAL_SRC) $(SRC_DIR)/types.h $(SRC_DIR)/dynamics.h $(SRC_DIR)/cost.h $(SRC_DIR)/Car.h $(SRC_DIR)/Track.h $(SRC_DIR)/MPPI.h $(SRC_DIR)/IOManager.h
 	$(CXX) $(CXXFLAGS) -I$(SRC_DIR) -o $@ $(SERIAL_SRC)
 
-mppi-cuda: $(CUDA_SRC) $(SRC_DIR)/kernels.cuh $(SRC_DIR)/CudaMPPI.cuh $(SRC_DIR)/cuda-util.cuh $(SRC_DIR)/types.h $(SRC_DIR)/dynamics.h $(SRC_DIR)/cost.h
+mppi-cuda: $(CUDA_SRC) $(SRC_DIR)/kernels.cuh $(SRC_DIR)/CudaMPPI.cuh ../cuda-util.cuh $(SRC_DIR)/types.h $(SRC_DIR)/dynamics.h $(SRC_DIR)/cost.h
 	$(NVCC) $(NVCCFLAGS) -I$(SRC_DIR) -o $@ $(CUDA_SRC) $(LDFLAGS)
 
 clean:

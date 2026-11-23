@@ -14,7 +14,7 @@ CellList::CellList(std::map<std::string, double> params) {
 
 void CellList::build(std::vector<double>& pos) {
     int numParticles = pos.size() / 3;
-    // Clear previous cell list
+    
     std::fill(cellIndex.begin(), cellIndex.end(), -1);
     std::fill(cell.begin(), cell.end(), -1);
 

@@ -7,8 +7,8 @@
     do {                                                                        \
         cudaError_t err = (call);                                               \
         if (err != cudaSuccess) {                                               \
-            std::cerr << "CUDA Error at " << __FILE__ << ":" << __LINE__       \
-                      << " — " << cudaGetErrorString(err) << std::endl;        \
+            std::cerr << "CUDA Error at " << __FILE__ << ":" << __LINE__        \
+                      << " — " << cudaGetErrorString(err) << std::endl;         \
             exit(EXIT_FAILURE);                                                 \
         }                                                                       \
     } while (0)
@@ -18,8 +18,8 @@
     do {                                                                        \
         cudaError_t err = cudaGetLastError();                                   \
         if (err != cudaSuccess) {                                               \
-            std::cerr << "Kernel Error at " << __FILE__ << ":" << __LINE__     \
-                      << " — " << cudaGetErrorString(err) << std::endl;        \
+            std::cerr << "Kernel Error at " << __FILE__ << ":" << __LINE__      \
+                      << " — " << cudaGetErrorString(err) << std::endl;         \
             exit(EXIT_FAILURE);                                                 \
         }                                                                       \
     } while (0)
@@ -42,9 +42,9 @@
         cudaEventRecord(_stop);                                                 \
         cudaEventSynchronize(_stop);                                            \
         float _ms = 0;                                                          \
-        cudaEventElapsedTime(&_ms, _start, _stop);                             \
+        cudaEventElapsedTime(&_ms, _start, _stop);                              \
         KERNEL_CHECK();                                                         \
-        std::cout << "[CUDA] " << label << " : " << _ms << " ms" << std::endl; \
+        std::cout << "[CUDA] " << label << " : " << _ms << " ms" << std::endl;  \
         cudaEventDestroy(_start);                                               \
         cudaEventDestroy(_stop);                                                \
     } while (0)
