@@ -1,7 +1,7 @@
 #include <chrono>
 
 #include "stream-util.h"
-#include "../cuda-util.h"
+#include "../cuda-util.cuh"
 #include "util.h"
 
 __global__ 

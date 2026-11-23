@@ -3,6 +3,7 @@ CXX ?= g++
 NVCCFLAGS ?= -O3 -std=c++20 -arch=sm_80
 CXXFLAGS ?= -O3 -march=native -std=c++20
 LDFLAGS = -lcurand
+SRC_DIR = src
 
 SERIAL_SRC = $(SRC_DIR)/main-serial.cpp $(SRC_DIR)/Car.cpp $(SRC_DIR)/Track.cpp $(SRC_DIR)/MPPI.cpp $(SRC_DIR)/IOManager.cpp
 CUDA_SRC = $(SRC_DIR)/main.cu $(SRC_DIR)/CudaMPPI.cu $(SRC_DIR)/Car.cpp $(SRC_DIR)/Track.cpp $(SRC_DIR)/IOManager.cpp

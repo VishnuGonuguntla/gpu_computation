@@ -5,7 +5,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "include/stb_image_write.h"
 
-#include "../cuda-util.h"
+#include "../cuda-util.cuh"
 #include "util.h"
 
 __global__
@@ -88,12 +88,3 @@ int main(int argc, char *argv[]) {
     cudaFree(data);
     return 0;
 }
-
-// #define PI        3.14159265358979323846
-// #define P(i, j)   p[(j) * (imax + 2) + (i)]
-// #define RHS(i, j) rhs[(j) * (imax + 2) + (i)]
-// #define P_D(i, j) p_d[(j) * (imax + 2) + (i)]
-// #define P_N_D(i, j) p_new_d[(j) * (imax + 2) + (i)]
-// #define RHS_D(i, j) rhs_d[(j) * (imax + 2) + (i)]
-// #define BLOCK_X 32
-// #define BLOCK_Y 32

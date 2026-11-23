@@ -77,4 +77,4 @@ clean:
 	$(MAKE) -C 2_molecularDyn clean
 	$(MAKE) -C 3_molecularDynOpt clean
 	$(MAKE) -C 4_DEM clean
-	$(MAKE) -C mini_project clean
+	$(MAKE) -C mppi clean

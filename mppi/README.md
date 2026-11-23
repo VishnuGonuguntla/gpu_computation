@@ -31,21 +31,22 @@ Dynamics \(F\) and costs \(\ell,\phi\) live in `src/dynamics.h` and `src/cost.h`
 
 ## Build
 
-From `mini_project/` (load CUDA before the GPU target):
+From `mppi/` (load CUDA before the GPU target):
 
 ```bash
 module load cuda/12.6.2   # cluster toolchain; skip if nvcc is already on PATH
-make serial               # g++  -> build/mppi-serial
-make cuda                 # nvcc -> build/mppi-cuda
+make serial               # g++  -> mppi-serial
+make cuda                 # nvcc -> mppi-cuda
 make                      # both
 ```
 
 Override GPU arch if needed: `make cuda NVCCFLAGS="-O3 -std=c++14 -arch=sm_70"`.
 
+Binaries and the data files (`config.par`, `carsConfig.par`, `trackData.txt`) end up directly in `mppi/` — there is no `build/` subdirectory.
+
 ## Run
 
 ```bash
-cd build
 ./mppi-serial config.par carsConfig.par trackData.txt telemetry.txt
 ./mppi-cuda   config.par carsConfig.par trackData.txt telemetry.txt
 ```
@@ -60,7 +61,6 @@ Outputs:
 The simulator does not render. It dumps instantaneous state; Python reconstructs the race:
 
 ```bash
-cd build
 python3 visualizer.py --telemetry telemetry.txt --track trackData.txt --run-info run_info.txt
 python3 visualizer.py --stride 2 --save race.mp4
 ```
